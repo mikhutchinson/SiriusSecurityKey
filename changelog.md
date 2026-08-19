@@ -27,3 +27,8 @@ changes are recorded here. `EXPERIMENTS.md` owns reproducible evidence;
 - No authenticator transport or WebAuthn ceremony is implemented.
 - No passkey or Chromium-parity claim is made.
 - No version has been released.
+
+### Changed
+
+- Updated GitHub Actions checkout from v4 to v5 after the first hosted run
+  exposed the former action's deprecated Node.js 20 runtime.

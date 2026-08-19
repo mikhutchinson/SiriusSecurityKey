@@ -136,3 +136,34 @@ Decision: keep.
 
 Publish the reviewed `main` history. Do not create a version tag or GitHub
 release because no authenticator behavior or release claim exists.
+
+## EXP-004 — First hosted CI run
+
+Date: 2026-08-19
+
+Question:
+
+Does the first public `main` revision pass the hosted SwiftPM source gates
+without runner or action warnings?
+
+Inputs:
+
+- Public commit `4a7e4d9889e64fae991bac8f37d377a15c60f82e`.
+- GitHub Actions run `32312889613` on `macos-15`.
+
+Command:
+
+```bash
+gh run watch 32312889613 --repo mikhutchinson/SiriusSecurityKey --exit-status
+```
+
+Result:
+
+- Debug build, all three tests, and release build passed.
+- The job completed successfully in 29 seconds.
+- GitHub warned that Node.js 20 is deprecated and that
+  `actions/checkout@v4` was being forced onto Node.js 24.
+
+Decision: keep the source evidence; replace the deprecated checkout action and
+rerun hosted CI. A successful workflow with a dependency deprecation warning is
+not the clean bootstrap gate.

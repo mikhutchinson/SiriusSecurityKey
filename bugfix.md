@@ -118,3 +118,30 @@ Closure gate:
 Every derived file maps to exact upstream paths and hashes, retains required
 notices, and has differential evidence. Keep this guard active for future
 upstream refreshes.
+
+## BUG-005 — Initial CI checkout action used a deprecated Node runtime
+
+Date: 2026-08-19
+
+Status: fixed in source; hosted verification pending
+
+Symptom:
+
+The first hosted CI run passed but warned that Node.js 20 is deprecated and
+that `actions/checkout@v4` was being forced to run on Node.js 24.
+
+Root cause:
+
+The initial workflow used the older checkout action copied by the bootstrap
+template.
+
+Fix:
+
+Update `.github/workflows/ci.yml` to `actions/checkout@v5`, whose runtime is
+Node.js 24.
+
+Verification:
+
+Run the complete hosted debug-build, test, and release-build workflow after the
+change. This entry remains pending until that run completes without the Node 20
+annotation.
