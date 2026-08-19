@@ -123,7 +123,7 @@ upstream refreshes.
 
 Date: 2026-08-19
 
-Status: fixed in source; hosted verification pending
+Status: fixed and hosted-verified
 
 Symptom:
 
@@ -142,6 +142,7 @@ Node.js 24.
 
 Verification:
 
-Run the complete hosted debug-build, test, and release-build workflow after the
-change. This entry remains pending until that run completes without the Node 20
-annotation.
+GitHub Actions run `32312963821` on commit
+`ddebb95906af451a5f2e2bac6b261c72638bd43e` completed the debug build, all three
+tests, and release build successfully with `actions/checkout@v5`. The prior
+Node.js 20 deprecation annotation did not recur.

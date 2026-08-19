@@ -167,3 +167,33 @@ Result:
 Decision: keep the source evidence; replace the deprecated checkout action and
 rerun hosted CI. A successful workflow with a dependency deprecation warning is
 not the clean bootstrap gate.
+
+## EXP-005 — Hosted CI checkout-runtime verification
+
+Date: 2026-08-19
+
+Question:
+
+Does the checkout v5 workflow pass the complete hosted source gate without the
+Node.js 20 deprecation annotation?
+
+Inputs:
+
+- Public commit `ddebb95906af451a5f2e2bac6b261c72638bd43e`.
+- GitHub Actions run `32312963821` on `macos-15`.
+
+Command:
+
+```bash
+gh run watch 32312963821 --repo mikhutchinson/SiriusSecurityKey --exit-status
+```
+
+Result:
+
+- `actions/checkout@v5` setup and post-run steps passed.
+- Debug build, all three tests, and release build passed.
+- The job completed successfully in 45 seconds.
+- The prior Node.js 20 deprecation annotation did not recur.
+
+Decision: keep. Hosted bootstrap CI is clean for this revision. This remains a
+source gate, not passkey interoperability, parity, or release certification.
