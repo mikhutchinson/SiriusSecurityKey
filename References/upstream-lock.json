@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-08-19",
+  "chromium": {
+    "repository": "https://chromium.googlesource.com/chromium/src.git",
+    "revision": "535b82484305ec03127bbe951212f6afdec72a43",
+    "fido_path": "device/fido",
+    "hybrid_path": "device/fido/cable",
+    "hybrid_tree": "e19c50264422f60b8daa136e0fb2212448427dff",
+    "license": "BSD-3-Clause"
+  },
+  "specifications": [
+    {
+      "name": "Client to Authenticator Protocol 2.3 Review Draft",
+      "date": "2025-10-23",
+      "url": "https://fidoalliance.org/specs/fido-v2.3-rd-20251023/fido-client-to-authenticator-protocol-v2.3-rd-20251023.html"
+    },
+    {
+      "name": "Proximity Exchange Protocol 1.0 Working Draft",
+      "date": "2026-07-17",
+      "url": "https://fidoalliance.org/specs/hybrid/proximity-exchange-protocol-v1.0-wd-20260717.html"
+    },
+    {
+      "name": "Web Authentication Level 3",
+      "url": "https://www.w3.org/TR/webauthn-3/"
+    }
+  ]
+}
