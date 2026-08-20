@@ -197,3 +197,234 @@ Result:
 
 Decision: keep. Hosted bootstrap CI is clean for this revision. This remains a
 source gate, not passkey interoperability, parity, or release certification.
+
+## EXP-006 — Pinned first-slice provenance and license inventory
+
+Date: 2026-08-19
+
+Question:
+
+Can the first hybrid slice be based on immutable Chromium/specification bytes
+with exact build, feature, source, license, and destination mappings rather than
+mutable documentation or remembered behavior?
+
+Commands:
+
+```bash
+git clone --filter=blob:none --no-checkout https://chromium.googlesource.com/chromium/src.git /private/tmp/siriussecuritykey-chromium.J91er6
+git -C /private/tmp/siriussecuritykey-chromium.J91er6 sparse-checkout init --cone
+git -C /private/tmp/siriussecuritykey-chromium.J91er6 sparse-checkout set device/fido
+git -C /private/tmp/siriussecuritykey-chromium.J91er6 checkout 535b82484305ec03127bbe951212f6afdec72a43
+git -C /private/tmp/siriussecuritykey-chromium.J91er6 rev-parse '535b82484305ec03127bbe951212f6afdec72a43:device/fido'
+git -C /private/tmp/siriussecuritykey-chromium.J91er6 rev-parse '535b82484305ec03127bbe951212f6afdec72a43:device/fido/cable'
+git -C /private/tmp/siriussecuritykey-chromium.J91er6 ls-tree -r --name-only 535b82484305ec03127bbe951212f6afdec72a43 device/fido | wc -l
+curl -fsSLo /private/tmp/siriussecuritykey-chromium.J91er6/ctap.html 'https://fidoalliance.org/specs/fido-v2.3-rd-20251023/fido-client-to-authenticator-protocol-v2.3-rd-20251023.html'
+curl -fsSLo /private/tmp/siriussecuritykey-chromium.J91er6/pxp.html 'https://fidoalliance.org/specs/hybrid/proximity-exchange-protocol-v1.0-wd-20260717.html'
+curl -fsSLo /private/tmp/siriussecuritykey-chromium.J91er6/webauthn.html 'https://www.w3.org/TR/2026/CR-webauthn-3-20260526/'
+shasum -a 256 /private/tmp/siriussecuritykey-chromium.J91er6/{ctap,pxp,webauthn}.html
+jq empty References/upstream-lock.json References/upstream-inventory.json
+```
+
+Inputs:
+
+- Chromium revision `535b82484305ec03127bbe951212f6afdec72a43`.
+- CTAP 2.3 Review Draft dated 2025-10-23.
+- PXP 1.0 Working Draft dated 2026-07-17.
+- WebAuthn Level 3 Candidate Recommendation Snapshot dated 2026-05-26.
+
+Result:
+
+- `device/fido` resolved to tree
+  `3a42c514171665162c9f4ef44b5b3c05b32afe17` with 402 files.
+- `device/fido/cable` resolved to tree
+  `e19c50264422f60b8daa136e0fb2212448427dff` with 26 files.
+- CTAP, PXP, and WebAuthn HTML SHA-256 values were respectively
+  `f3cccea113a57ae4cc139e26648b1670548e0cdfed1944aed3e93f5faa762fd1`,
+  `a809b124b393b643edb4a97658c4c08de390ad9f13db33bd921a908206115114`,
+  and `cd9be6587c6560ffe6f2b7175324d0bc4cd33963cf752ad414160affd7f8e163`.
+- Chromium's BSD-3-Clause license blob, relevant build conditions, feature
+  flags, direct source/test/fuzzer hashes, unported dependency graph, and exact
+  source-to-Swift mappings are retained in
+  `References/upstream-inventory.json`.
+- Source-derived files retain Chromium's header and
+  `THIRD_PARTY_NOTICES.md` retains the complete notice. Canonical CBOR and the
+  CoreBluetooth boundary are classified as specification implementations.
+- `jq` accepted both inventories.
+
+Decision: keep.
+
+The reviewed inventory is complete for the retained first slice only. The full
+pinned Chromium passkey surface remains an open plan gate.
+
+## EXP-007 — First hybrid slice and independent vectors
+
+Date: 2026-08-19
+
+Question:
+
+Can a Swift-only, dependency-injected route implement canonical QR bootstrap,
+authenticated proximity, tunnel routing, Noise KNpsk0, encrypted framing, and
+an explicit CTAP `authenticatorGetInfo` round trip with byte-exact independent
+evidence?
+
+Inputs:
+
+- The immutable authorities and source mappings from EXP-006.
+- Deterministic private scalars `01`, `02`, and `03` repeated to 32 bytes, a
+  16-byte `a5` QR secret, fixed advertisement plaintext, and fixed getInfo
+  response fields. These are public test values, not captured session secrets.
+- Python 3 with `cryptography` 48.0.0 as an implementation independent of the
+  Swift/CryptoKit code under test.
+
+Commands:
+
+```bash
+python3 -c 'import cryptography; print(cryptography.__version__)'
+shasum -a 256 Tests/SiriusSecurityKeyTests/Vectors/hybrid-vectors.json
+swift test --filter generatedQRCodeRoundTrips
+swift test --filter proximityMatchesActiveBootstrap
+swift test --filter noiseKNpsk0RoundTrip
+swift test --filter completeHybridSession
+```
+
+Result:
+
+- The independently generated fixture has SHA-256
+  `e40d68f2011853236600f8bc191eaedf772a67f918d717b667dea9a449515293`.
+- Swift matched the fixture's compressed and uncompressed P-256 points,
+  canonical QR CBOR/decimal URI, all three HKDF purpose outputs, authenticated
+  EID advertisement, tunnel ID, Noise initiator/response messages, handshake
+  hash, directional traffic keys, and first encrypted transport frame.
+- The composed injected integration reached a validated post-handshake getInfo,
+  then sent an explicit encrypted `[type=CTAP, command=0x04]`, parsed the
+  response with status/unknown fields preserved, sent shutdown, and closed.
+- Both `.pxp20260717` and `.chromiumCableV2Revision0` passed as separately
+  selected profiles. The implementation contains no profile auto-detection or
+  retry under a different profile.
+- The independent generator was an ephemeral experiment tool and was discarded;
+  Python is not a package dependency or distributed protocol component. Its
+  exact public inputs and outputs remain in the fixture and Swift tests.
+
+Decision: keep the Swift implementation and immutable vector fixture; discard
+the ephemeral Python generator.
+
+This is source/vector/local-integration evidence only. It does not prove a real
+phone, public tunnel, relying party, passkey ceremony, or parity.
+
+## EXP-008 — Fail-closed negative and cancellation gates
+
+Date: 2026-08-19
+
+Question:
+
+Does the first slice reject malformed, ambiguous, unsupported, replayed, and
+cancelled work without compatibility retry or secret-bearing diagnostics?
+
+Commands:
+
+```bash
+swift test --filter canonicalCBOR
+swift test --filter qrParser
+swift test --filter proximityTimeoutAndCancellation
+swift test --filter noiseHandshakeNegativeCases
+swift test --filter noiseTransportTamperIsTerminal
+swift test --filter noiseTransportNegativeStateCases
+swift test --filter hybridSessionDoesNotFallbackProfiles
+swift test --filter hybridSessionExplicitCancellation
+swift test --filter hybridSessionCancelsTunnelConnection
+swift test --filter tunnelOpenWaitIsCancellable
+rg -n 'print\(|debugPrint|NSLog|os_log|Logger' Sources Tests
+rg -n 'fatalError|try!|as!|Task\.detached|DispatchSemaphore|Process\(' Sources Tests
+```
+
+Result:
+
+- Canonical CBOR rejected non-shortest forms, duplicate/out-of-order keys,
+  indefinite values, tags, invalid UTF-8, forbidden keys, truncation, trailing
+  data, and every explicit resource limit. A deterministic 10,000-input
+  mutation campaign required every accepted value to re-encode byte-identically.
+- QR tests rejected every truncation of the retained vector, invalid decimal
+  widths/values, non-ASCII numerals, over-limit decimal input, lowercase or
+  malformed schemes, invalid points, wrong field types, and duplicate/empty
+  channel lists.
+- Proximity rejected HMAC mismatch, reserved bits, and unknown assigned domains;
+  timeout and caller cancellation were terminal.
+- Noise rejected wrong PSK, malformed point/message size, handshake state reuse,
+  ciphertext tamper/replay/truncation, authenticated bad padding, and exhausted
+  counters. Authentication/padding/counter failure permanently closed the
+  cipher state.
+- The composed session rejected a mismatched explicit wire profile and refused
+  to advertise unsupported ceremony hints, linking, an unknown assigned-domain
+  count, or BLE data transport.
+- The first explicit session-cancellation run passed semantically but took
+  63.700 seconds. It exposed an actor-queue race recorded as BUG-007. After the
+  structured cancellation-signal fix, discovery, tunnel-open, and delegate-wait
+  cancellation tests each completed in 0.001 seconds.
+- An earlier focused tamper run terminated with signal 5 because a Foundation
+  `Data` slice retained a nonzero index. BUG-006 records the normalization fix
+  and zero-based public payload assertions.
+- Intermediate compilation also exposed and fixed overlapping CommonCrypto
+  output access, test-only `fileprivate` visibility, and direct `NSLock` use in
+  an async test helper. The failed attempts were discarded only after the same
+  focused gates passed.
+- The two source scans returned no matches. No production source logs payloads,
+  QR data, keys, advertisements, tunnel identifiers, or decrypted CTAP bytes.
+
+Decision: keep the fail-closed implementation and regression tests. Real-device
+and sustained sanitizer/fuzzer campaigns remain unrun.
+
+## EXP-009 — First-slice local source and sanitizer gate
+
+Date: 2026-08-19
+
+Question:
+
+Does the reconciled first-slice tree pass formatting, provenance, debug, test,
+release, memory-safety, race, dependency, and platform checks on the development
+host?
+
+Commands:
+
+```bash
+swift --version
+sw_vers
+uname -m
+swift format lint --recursive Sources Tests Package.swift
+jq empty References/upstream-lock.json References/upstream-inventory.json Tests/SiriusSecurityKeyTests/Vectors/hybrid-vectors.json
+swift package show-dependencies
+swift package dump-package | jq '{name, platforms, products: [.products[].name], dependencies}'
+swift build
+swift test
+swift build -c release
+swift test --sanitize=address
+swift test --sanitize=thread
+xcodebuild -scheme SiriusSecurityKey -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
+git diff --check
+```
+
+Environment:
+
+- Apple Swift 6.3.3 (`swiftlang-6.3.3.1.3`, `clang-2100.1.1.101`).
+- macOS 26.2 build `25C56` on arm64.
+
+Result:
+
+- Format lint, all three JSON parses, debug build, release build, and diff check
+  completed with no diagnostics.
+- Swift Testing executed 33 tests with zero failures. The suite includes exact
+  vectors, 10,000 deterministic CBOR mutations, malformed/truncated/oversized
+  parser cases, both explicit wire profiles, a no-fallback profile mismatch,
+  EID/tunnel/Noise negatives, and discovery/tunnel/caller cancellation.
+- The same 33 tests passed under AddressSanitizer in 0.194 seconds and
+  ThreadSanitizer in 0.365 seconds with no reported issue.
+- SwiftPM reported no external dependencies. The only source-target files are
+  Swift; Python was used only for the discarded independent vector experiment.
+- The package manifest resolved macOS 13 and iOS 16 deployment declarations.
+- The local generic iOS build was unavailable before compilation: Xcode reported
+  that iOS 26.5 is not installed and that local CoreSimulator 1051.54.0 is older
+  than required 1051.55.0. This gate is skipped locally, not passed. The hosted
+  workflow retains the generic iOS command for an independent runner result.
+
+Decision: keep. The local source and sanitizer gates pass. Await hosted macOS
+and iOS source results; real-device, live-tunnel, ceremony, external-consumer,
+and release-byte gates remain unrun.

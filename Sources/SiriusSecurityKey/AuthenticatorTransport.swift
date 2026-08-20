@@ -11,7 +11,9 @@ public struct CTAPRequest: Sendable, Equatable {
 
   public init(command: UInt8, payload: Data = Data()) {
     self.command = command
-    self.payload = payload
+    var normalizedPayload = Data()
+    normalizedPayload.append(payload)
+    self.payload = normalizedPayload
   }
 
   public init(encoded: Data) throws {
@@ -19,7 +21,7 @@ public struct CTAPRequest: Sendable, Equatable {
       throw CTAPFramingError.missingCommand
     }
     self.command = command
-    self.payload = encoded.dropFirst()
+    self.payload = Data(encoded.dropFirst())
   }
 
   public var encoded: Data {
@@ -36,7 +38,9 @@ public struct CTAPResponse: Sendable, Equatable {
 
   public init(status: UInt8, payload: Data = Data()) {
     self.status = status
-    self.payload = payload
+    var normalizedPayload = Data()
+    normalizedPayload.append(payload)
+    self.payload = normalizedPayload
   }
 
   public init(encoded: Data) throws {
@@ -44,7 +48,7 @@ public struct CTAPResponse: Sendable, Equatable {
       throw CTAPFramingError.missingStatus
     }
     self.status = status
-    self.payload = encoded.dropFirst()
+    self.payload = Data(encoded.dropFirst())
   }
 
   public var encoded: Data {

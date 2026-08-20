@@ -33,22 +33,24 @@ protocol core must not become a wrapper around one vendor's credential API.
 
 ## Current truth
 
-This repository is a pre-implementation scaffold. It contains a byte-preserving
-CTAP request/response transport seam and source tests. It does **not** yet
-implement or claim:
+This repository contains a development-stage first hybrid slice in addition to
+the byte-preserving CTAP request/response transport seam:
 
-- WebAuthn ceremony validation;
-- canonical CBOR;
-- QR bootstrap encoding;
-- Bluetooth discovery or proximity proof;
-- WebSocket tunnel operation;
-- Noise handshake or encrypted framing;
-- CTAP authenticator commands beyond raw framing;
-- USB, NFC, Bluetooth, hybrid, or platform authenticator operation;
-- passkey creation or assertion;
-- conditional mediation or autofill;
-- Chromium parity;
-- a release artifact.
+- a bounded strict subset of CTAP2 canonical CBOR;
+- canonical `FIDO:/` QR bootstrap generation with session-owned secrets;
+- injected and CoreBluetooth proximity discovery for authenticated FIDO service
+  data;
+- validated `wss` tunnel routing with binary-message and subprotocol checks;
+- Noise KNpsk0 handshake and bounded encrypted transport framing;
+- explicit, non-fallback PXP and Chromium revision-zero post-handshake profiles;
+- post-handshake and explicit CTAP `authenticatorGetInfo` validation; and
+- deterministic local integration, negative, mutation, and independent
+  cryptographic-vector tests.
+
+It does **not** yet implement or claim WebAuthn ceremony validation, passkey
+creation or assertion, persistent pairing, BLE data transport, USB/NFC/platform
+authenticator operation, conditional mediation, live phone/tunnel
+interoperability, Chromium parity, production support, or a release artifact.
 
 Never describe planned behavior as shipped behavior. Never turn a source test,
 mock, simulator, local handshake, or one-device demonstration into a broader

@@ -5,9 +5,11 @@
 Affected invariants: `INV-SK1`, `INV-SK3`, `INV-SK8`, `INV-SK13`,
 `INV-SK14`, `INV-SK15`.
 
-Current source anchors: `References/upstream-lock.json:4-26` pins the initial
-authorities, while `PARITY.md:3-50` pins the baseline and marks every initial
-comparison row unimplemented.
+Current source anchors: `References/upstream-lock.json:4-30` pins exact
+specification and Chromium authorities,
+`References/upstream-inventory.json:5-155` records the reviewed first-slice
+build/license/source mappings, and `PARITY.md:3-54` leaves every non-retained row
+unimplemented and every retained row below `supported`.
 
 ## Baseline authority
 
@@ -60,8 +62,10 @@ header that erases its origin.
 ## Exit checklist
 
 - [ ] The full pinned Chromium surface has been inventoried.
-- [ ] Every feature belongs to a matrix row with a literal status.
-- [ ] Required build-time flags and platform conditions are recorded.
-- [ ] Every planned source-derived port has file/blob/license mapping.
-- [ ] No parity claim relies on mutable upstream `HEAD`.
-- [ ] Matrix and upstream-refresh commands/results are in `EXPERIMENTS.md`.
+- [x] Every currently classified feature belongs to a matrix row with a literal
+      status.
+- [x] First-slice build-time flags and platform conditions are recorded.
+- [x] Every retained source-derived port has file/blob/license mapping.
+- [x] No parity claim relies on mutable upstream `HEAD`.
+- [x] First-slice matrix and upstream inventory commands/results are in
+      `EXPERIMENTS.md`.

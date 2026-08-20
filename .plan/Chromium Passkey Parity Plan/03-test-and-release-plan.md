@@ -4,9 +4,11 @@
 
 Affected invariants: all, especially `INV-SK6` through `INV-SK15`.
 
-Current source anchors: `AGENTS.md:257-290` defines the source-versus-parity
-evidence boundary; `AGENTS.md:292-305` defines completion; and
-`EXPERIMENTS.md:47-93` records only the initial source gate.
+Current source anchors: `AGENTS.md:259-307` defines the source-versus-parity
+evidence boundary and completion contract; `EXPERIMENTS.md:201-430` records the
+first-slice provenance, source, negative, cancellation, and local gate evidence;
+and `PARITY.md:31-54` keeps development below supported and the real-device and
+release rows unimplemented.
 
 ## Test layers
 

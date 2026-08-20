@@ -13,9 +13,15 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v5
+      - name: Format and provenance
+        run: |
+          swift format lint --recursive Sources Tests Package.swift
+          jq empty References/upstream-lock.json References/upstream-inventory.json Tests/SiriusSecurityKeyTests/Vectors/hybrid-vectors.json
       - name: Debug build
         run: swift build
       - name: Tests
         run: swift test
       - name: Release build
         run: swift build -c release
+      - name: iOS build
+        run: xcodebuild -scheme SiriusSecurityKey -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build

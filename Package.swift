@@ -18,7 +18,8 @@ let package = Package(
     .target(name: "SiriusSecurityKey"),
     .testTarget(
       name: "SiriusSecurityKeyTests",
-      dependencies: ["SiriusSecurityKey"]
+      dependencies: ["SiriusSecurityKey"],
+      resources: [.process("Vectors")]
     ),
   ]
 )

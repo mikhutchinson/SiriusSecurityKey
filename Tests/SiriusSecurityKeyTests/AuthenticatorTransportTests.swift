@@ -10,6 +10,7 @@ func requestFramingRoundTrip() throws {
 
   #expect(request.command == 0x02)
   #expect(request.payload == Data([0xa1, 0x01, 0x02]))
+  #expect(request.payload.startIndex == 0)
   #expect(request.encoded == encoded)
 }
 
@@ -20,6 +21,7 @@ func responseFramingRoundTrip() throws {
 
   #expect(response.status == 0x00)
   #expect(response.payload == Data([0xa1, 0x01, 0x02]))
+  #expect(response.payload.startIndex == 0)
   #expect(response.encoded == encoded)
 }
 

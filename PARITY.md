@@ -3,9 +3,9 @@
 Baseline Chromium revision:
 `535b82484305ec03127bbe951212f6afdec72a43`.
 
-> **Current status: inventory scaffold.** Every row is unimplemented. This is
-> not yet a complete inventory of the pinned Chromium surface and makes no
-> parity claim.
+> **Current status: first slice in development.** Nine bounded CTAP, hybrid,
+> and security rows have retained source and local evidence. None is supported:
+> the Chromium inventory and every real-device/release gate remain incomplete.
 
 Status vocabulary:
 
@@ -28,8 +28,8 @@ Status vocabulary:
 | WebAuthn | Timeout, abort, cancellation, and error mapping | unimplemented | — |
 | WebAuthn | Attestation policy and formats | unimplemented | — |
 | WebAuthn | Chromium-baseline extension inventory | unimplemented | — |
-| CTAP | Bounded canonical CBOR | unimplemented | — |
-| CTAP | Authenticator discovery and `authenticatorGetInfo` | unimplemented | — |
+| CTAP | Bounded canonical CBOR | development | [EXP-007](EXPERIMENTS.md#exp-007--first-hybrid-slice-and-independent-vectors) |
+| CTAP | Authenticator discovery and `authenticatorGetInfo` | development | [EXP-007](EXPERIMENTS.md#exp-007--first-hybrid-slice-and-independent-vectors) |
 | CTAP | Make credential | unimplemented | — |
 | CTAP | Get assertion and next assertion | unimplemented | — |
 | CTAP | Client PIN and PIN/UV auth protocols | unimplemented | — |
@@ -38,17 +38,17 @@ Status vocabulary:
 | Roaming | USB HID transport | unimplemented | — |
 | Roaming | NFC transport | unimplemented | — |
 | Roaming | Bluetooth transport | unimplemented | — |
-| Hybrid | Canonical `FIDO:/` QR bootstrap | unimplemented | — |
-| Hybrid | Bluetooth proximity advertisement | unimplemented | — |
-| Hybrid | Tunnel-domain derivation and WebSocket rendezvous | unimplemented | — |
-| Hybrid | Noise handshake and encrypted framing | unimplemented | — |
-| Hybrid | CTAP exchange over hybrid transport | unimplemented | — |
+| Hybrid | Canonical `FIDO:/` QR bootstrap | development | [EXP-007](EXPERIMENTS.md#exp-007--first-hybrid-slice-and-independent-vectors) |
+| Hybrid | Bluetooth proximity advertisement | development | [EXP-007](EXPERIMENTS.md#exp-007--first-hybrid-slice-and-independent-vectors) |
+| Hybrid | Tunnel-domain derivation and WebSocket rendezvous | development | [EXP-008](EXPERIMENTS.md#exp-008--fail-closed-negative-and-cancellation-gates) |
+| Hybrid | Noise handshake and encrypted framing | development | [EXP-007](EXPERIMENTS.md#exp-007--first-hybrid-slice-and-independent-vectors) |
+| Hybrid | CTAP exchange over hybrid transport | development | [EXP-008](EXPERIMENTS.md#exp-008--fail-closed-negative-and-cancellation-gates) |
 | Hybrid | Linking, pairing, revocation, and recovery | unimplemented | — |
-| Security | Secret-safe diagnostics | unimplemented | — |
-| Security | Parser, protocol, and state-machine fuzzing | unimplemented | — |
+| Security | Secret-safe diagnostics | development | [EXP-008](EXPERIMENTS.md#exp-008--fail-closed-negative-and-cancellation-gates) |
+| Security | Parser, protocol, and state-machine fuzzing | development | [EXP-008](EXPERIMENTS.md#exp-008--fail-closed-negative-and-cancellation-gates) |
 | Release | Clean external SwiftPM consumer | unimplemented | — |
 | Release | Declared real-device/browser matrix | unimplemented | — |
 
-The first implementation milestone may advance only the five hybrid/CTAP rows
-needed for QR → proximity → tunnel → Noise → `authenticatorGetInfo`. All other
-rows remain unimplemented until independently evidenced.
+`development` here means local implementation evidence only. A row cannot move
+to `supported` until its declared differential, real-device, and release-byte
+gates pass. All other rows remain unimplemented until independently evidenced.

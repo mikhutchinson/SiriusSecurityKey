@@ -5,9 +5,11 @@ WebAuthn, CTAP, and FIDO hybrid transports for applications that need a real
 browser-grade authenticator client without depending on a privileged browser
 or a private platform API.
 
-> **Status: pre-implementation scaffold.** The package currently defines and
-> tests the raw CTAP transport boundary. It does not yet authenticate, create a
-> passkey, display a QR code, discover a phone, or claim interoperability.
+> **Status: first hybrid slice in development.** The package now implements the
+> bounded QR → Bluetooth proximity → WebSocket tunnel → Noise → CTAP
+> `authenticatorGetInfo` route. Independent vectors and injected end-to-end
+> tests pass; no real-phone run, passkey ceremony, parity, production-support,
+> or release claim has been made.
 
 ## Goal
 
@@ -55,9 +57,36 @@ Authenticator selection
 Verified WebAuthn response
 ```
 
-The first implementation slice is deliberately narrower: QR bootstrap → phone
-proximity → tunnel → Noise handshake → `authenticatorGetInfo`. See the
+The retained implementation slice is deliberately narrower: QR bootstrap →
+phone proximity → tunnel → Noise handshake → `authenticatorGetInfo`. See the
 [Chromium Passkey Parity Plan](.plan/Chromium%20Passkey%20Parity%20Plan/README.md).
+
+## Development API
+
+```swift
+let session = try HybridSession(
+  qrConfiguration: HybridQRConfiguration(requestType: .getAssertion),
+  wireProfile: .pxp20260717
+)
+
+// The consumer owns QR rendering and explicit user intent.
+renderQRCode(session.qrURI)
+
+let info = try await session.getInfo(
+  scanner: CoreBluetoothHybridScanner()
+)
+```
+
+`HybridWireProfile` must be selected explicitly before I/O. A failed PXP parse
+is never retried as Chromium revision-zero framing, or vice versa. The one-shot
+session also rejects pairing and BLE data-channel advertisements, unknown
+assigned-domain counts, and non-getAssertion hints until those capabilities
+exist.
+
+Consumer apps must provide the applicable Apple Bluetooth usage description
+and own presentation, lifecycle, consent, and cancellation. The package emits
+no protocol payloads or secrets to logs. This API currently stops after a
+validated `getInfo`; it does not create or assert a credential.
 
 ## Build
 
@@ -85,4 +114,5 @@ Those records are mandatory parts of the repository contract. See
 
 SiriusSecurityKey is licensed under the BSD 3-Clause License. Files derived
 from another project must retain the original notices required by that
-project's license.
+project's license. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) and
+[`References/upstream-inventory.json`](References/upstream-inventory.json).

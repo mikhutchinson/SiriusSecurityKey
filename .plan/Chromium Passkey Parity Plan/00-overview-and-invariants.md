@@ -4,17 +4,21 @@
 
 ## Current source-backed truth
 
-- `Package.swift:5-23` declares one Swift-only library product and one test
-  target for macOS and iOS.
-- `Sources/SiriusSecurityKey/AuthenticatorTransport.swift:3-77` defines only
-  raw CTAP framing, transport kinds, and a transport protocol.
-- `README.md:8-22` explicitly states that no authenticator operation,
-  interoperability, or parity exists yet.
-- `README.md:24-37` fixes the Swift-only, general-purpose product boundary.
-- `PARITY.md:3-17` pins the comparison revision and defines evidence-bearing
-  row statuses; `PARITY.md:19-50` marks every initial row unimplemented.
-- `References/upstream-lock.json:4-26` pins the initial Chromium and
-  specification authorities.
+- `Package.swift:5-24` declares one Swift-only library product and one resource-
+  backed test target for macOS and iOS.
+- `Sources/SiriusSecurityKey/HybridSession.swift:22-224` composes the retained
+  one-shot QR, proximity, tunnel, Noise, and explicit CTAP `getInfo` route.
+- `Sources/SiriusSecurityKey/CanonicalCBOR.swift:3-125` and
+  `Sources/SiriusSecurityKey/AuthenticatorTransport.swift:3-80` provide the
+  bounded canonical byte and CTAP framing boundaries used by that route.
+- `README.md:8-12` and `README.md:60-89` state that the first slice has local
+  development evidence but no real-phone interoperability, passkey ceremony,
+  parity, or release claim.
+- `PARITY.md:3-54` pins the comparison revision and marks only the retained
+  first-slice rows `development`; no row is `supported`.
+- `References/upstream-lock.json:4-30` and
+  `References/upstream-inventory.json:5-155` pin exact authorities, file hashes,
+  license, and first-slice mappings.
 
 ## Problem
 
@@ -56,8 +60,8 @@ Additional first-slice consequences:
 ## Exit checklist
 
 - [x] Current-source claims have exact, current file and line references.
-- [ ] Every later part cites affected invariant IDs.
-- [ ] No consumer-specific behavior enters the package boundary.
-- [ ] Deployed compatibility and normative conformance remain separately
+- [x] Every later part cites affected invariant IDs.
+- [x] No consumer-specific behavior enters the package boundary.
+- [x] Deployed compatibility and normative conformance remain separately
       versioned.
-- [ ] Root ledgers agree with the plan's current-truth section.
+- [x] Root ledgers agree with the plan's current-truth section.

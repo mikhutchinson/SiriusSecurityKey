@@ -5,9 +5,12 @@
 Affected invariants: `INV-SK2`, `INV-SK3`, `INV-SK6` through `INV-SK12`, and
 `INV-SK14`.
 
-Current source anchors: `Sources/SiriusSecurityKey/AuthenticatorTransport.swift:3-77`
-is the complete retained protocol surface, and `PARITY.md:31-45` shows that the
-required CTAP and hybrid capabilities remain unimplemented.
+Current source anchors: `Sources/SiriusSecurityKey/HybridSession.swift:22-224`
+composes the first route; `CanonicalCBOR.swift:3-125`,
+`HybridQRCode.swift:23-123`, `HybridProximity.swift:68-198`,
+`HybridTunnel.swift:37-80`, `HybridNoise.swift:14-246`, and
+`AuthenticatorInfo.swift:7-76` own its explicit layers; and `PARITY.md:31-48`
+classifies those rows as development rather than supported.
 
 ## Slice thesis
 
@@ -87,12 +90,29 @@ recorded.
 - USB/NFC roaming transports.
 - A Chromium-parity claim.
 
+## Retained development evidence
+
+- Canonical CBOR and QR pass exact bytes, malformed/truncated/bounded cases, and
+  a deterministic 10,000-input mutation campaign.
+- EID, tunnel, Noise transcript/traffic keys, and the first encrypted frame
+  match an independently generated Python/Cryptography fixture.
+- Injected end-to-end tests complete both explicit post-handshake profiles and
+  prove that a profile mismatch never triggers a retry under another profile.
+- Cancellation interrupts discovery and tunnel-open waits, and Noise failures
+  are terminal for tamper, replay, truncation, bad padding, and counter
+  exhaustion.
+- Real phone, live tunnel, and relying-party gates remain unrun and therefore
+  prevent every `supported` or interoperability claim.
+
 ## Exit checklist
 
-- [ ] QR bootstrap passes byte and negative vectors.
-- [ ] Bluetooth match is tied to the active secret and bounded.
+- [x] QR bootstrap passes byte and negative vectors.
+- [x] Bluetooth match is tied to the active secret and bounded in injected
+      tests.
 - [ ] Tunnel connection and cancellation pass local and real-peer gates.
-- [ ] Noise passes transcript, tamper, replay, and counter gates.
+- [x] Noise passes transcript, tamper, replay, truncation, padding, and counter
+      gates.
 - [ ] A real phone returns a validated CTAP `getInfo` response.
-- [ ] Secrets are absent from logs and retained experiment artifacts.
-- [ ] Ledgers state exact supported and deferred behavior.
+- [x] Live session secrets are absent from logs and retained artifacts;
+      deterministic nonproduction vector material is explicitly labeled.
+- [x] Ledgers state exact development and deferred behavior.
