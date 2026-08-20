@@ -271,7 +271,7 @@ private struct NoiseSymmetricState: Sendable {
   mutating func mixHash(_ input: some DataProtocol) {
     var hashInput = handshakeHash
     hashInput.append(contentsOf: input)
-    handshakeHash = HybridCryptography.sha256(hashInput)
+    handshakeHash = ProtocolCryptography.sha256(hashInput)
   }
 
   mutating func mixKey(_ inputKeyMaterial: some DataProtocol) throws {

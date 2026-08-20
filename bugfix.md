@@ -339,3 +339,186 @@ Verification:
 
 A regression test now encodes and decodes the empty map exactly as `a0`; the
 duplicate-key and map-order negatives remain green.
+
+## BUG-011 — Platform URL and suffix behavior could drift across hosts
+
+Date: 2026-08-20
+
+Status: fixed and source-verified
+
+Symptom:
+
+Origin and RP authorization would be security-sensitive if implemented with a
+Foundation URL parser, an OS-dependent IDNA transform, an incomplete suffix
+list, or a caller-provided trust override.
+
+Root cause:
+
+The scaffold had no immutable normalization authority and no RP authorization
+layer. Platform behavior could therefore have become part of the protocol
+without an exact dependency or dataset lock.
+
+Fix:
+
+- Pin `swift-url` 0.4.2 and its exact revision for WHATWG URL parsing and UTS
+  #46 non-transitional normalization.
+- Bundle Chromium revision `535b8248`'s exact ICANN/private public-suffix bytes
+  and validate exact, wildcard, exception, and registrable-domain rules.
+- Make validated RP IDs constructible only through origin-bound validation; no
+  public trust flag or unchecked initializer exists.
+
+Verification:
+
+Unicode/Punycode, HTTPS, localhost, credential/path/query/fragment, IP,
+unrelated suffix, private `appspot.com`/`up.railway.app`, and Kawasaki exception
+tests pass. The resource and dependency revisions/hashes are locked in both
+provenance files.
+
+## BUG-012 — Hybrid execution was shaped around a hard-coded getInfo endpoint
+
+Date: 2026-08-20
+
+Status: fixed and source-verified
+
+Symptom:
+
+`HybridSession` directly emitted `[type=CTAP, command=0x04]`. Extending that
+shape for assertions risked a second channel owner, raw command access around
+ceremony policy, request replay, or divergent status-message handling.
+
+Root cause:
+
+The first slice stopped at a diagnostic command and had no private reusable
+authenticator transport or typed ceremony operation.
+
+Fix:
+
+- Give one private `HybridAuthenticatorTransport` actor exclusive ownership of
+  the Noise cipher and binary channel.
+- Route diagnostic getInfo and typed assertion transactions through the same
+  one-send transport; any encrypt/send/receive ambiguity closes it permanently.
+- Keep encoded plans and the live hybrid CTAP transport internal. The public
+  assertion path accepts only an immutable, intent-authorized ceremony.
+
+Verification:
+
+Both explicit profiles still pass getInfo. Allow-list and discoverable
+assertions pass through the same owner, while an injected post-dispatch failure
+records exactly one `0x02` command and leaves the session terminally failed.
+
+## BUG-013 — Controlled RP lifetime used an intentionally leaked continuation
+
+Date: 2026-08-20
+
+Status: fixed and harness-verified
+
+Symptom:
+
+The first local controlled-RP launch printed Swift's continuation-misuse
+diagnostic because the server kept itself alive with a checked continuation
+that was deliberately never resumed.
+
+Root cause:
+
+A checked continuation was used as an infinite process-lifetime primitive
+rather than only for an operation with one eventual completion.
+
+Fix:
+
+Retain the listener normally and keep the async command alive with a cancellable
+continuous-clock loop. Listener readiness still uses a lock-protected,
+single-resume continuation gate.
+
+Verification:
+
+The rebuilt server launched without runtime diagnostics, served the
+registration page and required-UV ES256 options through local HTTP and the
+configured public HTTPS funnel, and shut down on explicit process cancellation.
+
+### BUG-001 follow-up — assertion source exists; physical evidence does not
+
+Date: 2026-08-20
+
+Status: open; documentation guard advanced
+
+Trust-bound assertion, server verification, and controlled-RP source now pass
+local tests, mutation, and sanitizers. No iPhone or Android assertion receipt
+has yet been retained, so every affected parity row remains `development` and
+the physical matrix remains unpassed.
+
+### BUG-002 follow-up — explicit profiles still require deployed-peer proof
+
+Date: 2026-08-20
+
+Status: open; no-fallback mitigation retained
+
+The live harness requires either `pxp-20260717` or
+`chromium-cable-v2-r0`; it has no default and never retries the other profile.
+Neither profile is classified as deployed-phone compatible until its exact
+physical-device row passes.
+
+## BUG-014 — Live app bundle initially omitted the pinned suffix resource
+
+Date: 2026-08-20
+
+Status: fixed and artifact-verified
+
+Symptom:
+
+The first controlled-RP `.app` assembly copied the release executable and
+Bluetooth usage description but not SwiftPM's generated resource bundle. Exact
+host RP IDs happened not to load the suffix database, masking the incomplete
+artifact during the first public-ingress smoke.
+
+Root cause:
+
+SwiftPM places target resources next to the command-line executable; manually
+assembling an app bundle requires copying that generated bundle into
+`Contents/Resources`.
+
+Fix:
+
+`Tools/ControlledRP/build-app.sh` now copies the exact
+`SiriusSecurityKey_SiriusSecurityKey.bundle` with `ditto` on every release app
+assembly.
+
+Verification:
+
+The rebuilt app contains `effective_tld_names.dat` under `Contents/Resources`.
+Its SHA-256 is the locked
+`4155611645690529d1bbea0cfe653b0c45f63b028e0ba039de29a97edc3204ca`.
+
+## BUG-015 — Revision-zero tests incorrectly retained revision-one message types
+
+Date: 2026-08-20
+
+Status: fixed and source-verified
+
+Symptom:
+
+The first-slice scripted peer applied revision-zero post-handshake padding but
+still expected a message-type byte and shutdown frame. Pinned Chromium source
+shows revision zero has neither; only revision one and current PXP framing use
+typed CTAP/update/shutdown messages.
+
+Root cause:
+
+The original profile seam covered post-handshake decoding but did not carry the
+selected revision into established transport framing. Shared tests therefore
+proved the wrong historical wire behavior.
+
+Fix:
+
+- Pass the immutable wire profile into the private hybrid transport owner.
+- For Chromium revision zero, send and receive raw encrypted CTAP frames and
+  close the WebSocket without a shutdown message.
+- For current PXP/revision-one framing, retain typed messages, bounded updates,
+  and explicit shutdown.
+- Make allow-list assertion and getInfo integration tests run under both exact
+  profiles with distinct framing expectations.
+
+Verification:
+
+The focused hybrid suite passes 29 tests/cases. Both profiles complete getInfo
+and an assertion; revision zero records no shutdown frame, current PXP does,
+and the profile-mismatch test still fails without retry.

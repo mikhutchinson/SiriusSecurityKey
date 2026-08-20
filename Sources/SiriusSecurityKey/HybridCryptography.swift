@@ -44,6 +44,12 @@ enum HybridKeyPurpose: UInt32, Sendable {
   case psk = 3
 }
 
+enum ProtocolCryptography {
+  static func sha256(_ data: Data) -> Data {
+    Data(SHA256.hash(data: data))
+  }
+}
+
 enum HybridCryptography {
   static func derive(
     secret: Data,
@@ -136,10 +142,6 @@ enum HybridCryptography {
 
   static func hmacSHA256(key: Data, message: Data) -> Data {
     Data(HMAC<SHA256>.authenticationCode(for: message, using: SymmetricKey(data: key)))
-  }
-
-  static func sha256(_ data: Data) -> Data {
-    Data(SHA256.hash(data: data))
   }
 
   static func decryptAES256Block(_ block: Data, key: Data) throws -> Data {

@@ -15,6 +15,9 @@ func authenticatorInfoParsesCanonicalResponse() throws {
   #expect(info.options == ["rk": true, "uv": true])
   #expect(info.maximumMessageSize == 1200)
   #expect(info.pinUVAuthProtocols == [2, 1])
+  #expect(info.maximumCredentialCountInList == 64)
+  #expect(info.maximumCredentialIDLength == 1024)
+  #expect(info.transports == ["hybrid", "internal"])
   #expect(info.rawResponse.value(forUnsignedKey: 99) == .textString("future"))
 }
 
@@ -64,6 +67,12 @@ func makeGetInfoPayload() throws -> Data {
       CBORMapEntry(
         key: .unsigned(6),
         value: .array([.unsigned(2), .unsigned(1)])
+      ),
+      CBORMapEntry(key: .unsigned(7), value: .unsigned(64)),
+      CBORMapEntry(key: .unsigned(8), value: .unsigned(1024)),
+      CBORMapEntry(
+        key: .unsigned(9),
+        value: .array([.textString("hybrid"), .textString("internal")])
       ),
       CBORMapEntry(key: .unsigned(99), value: .textString("future")),
     ])

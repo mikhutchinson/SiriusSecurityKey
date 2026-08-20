@@ -19,6 +19,12 @@ public struct AuthenticatorInfo: Sendable, Equatable {
   public let maximumMessageSize: UInt32?
   /// Supported PIN/UV protocol versions in authenticator preference order.
   public let pinUVAuthProtocols: [UInt32]
+  /// Optional maximum credential descriptors accepted in one allow list.
+  public let maximumCredentialCountInList: UInt32?
+  /// Optional maximum credential ID size accepted by the authenticator.
+  public let maximumCredentialIDLength: UInt32?
+  /// Authenticator transports reported by CTAP 2.1 and later.
+  public let transports: [String]
   /// Complete validated response, including unknown forward-compatible fields.
   public let rawResponse: CBORValue
 }
@@ -64,6 +70,13 @@ enum AuthenticatorInfoParser {
     }
 
     let pinUVAuthProtocols = try unsignedArray(raw.value(forUnsignedKey: 6))
+    let maximumCredentialCountInList = try positiveUnsigned(
+      raw.value(forUnsignedKey: 7)
+    )
+    let maximumCredentialIDLength = try positiveUnsigned(
+      raw.value(forUnsignedKey: 8)
+    )
+    let transports = try stringArray(raw.value(forUnsignedKey: 9), required: false)
     return AuthenticatorInfo(
       versions: versions,
       extensions: extensions,
@@ -71,6 +84,9 @@ enum AuthenticatorInfoParser {
       options: options,
       maximumMessageSize: maximumMessageSize,
       pinUVAuthProtocols: pinUVAuthProtocols,
+      maximumCredentialCountInList: maximumCredentialCountInList,
+      maximumCredentialIDLength: maximumCredentialIDLength,
+      transports: transports,
       rawResponse: raw
     )
   }
@@ -136,5 +152,15 @@ enum AuthenticatorInfoParser {
       integers.append(integer)
     }
     return integers
+  }
+
+  private static func positiveUnsigned(_ value: CBORValue?) throws -> UInt32? {
+    guard let value else {
+      return nil
+    }
+    guard case .unsigned(let integer) = value, integer > 0 else {
+      throw HybridProtocolError.invalidAuthenticatorInfo
+    }
+    return integer
   }
 }

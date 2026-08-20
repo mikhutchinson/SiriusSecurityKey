@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleExecutable</key>
+  <string>SiriusSecurityKeyControlledRP</string>
+  <key>CFBundleIdentifier</key>
+  <string>org.siriussecuritykey.controlled-rp</string>
+  <key>CFBundleName</key>
+  <string>SiriusSecurityKey Controlled RP</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>NSBluetoothAlwaysUsageDescription</key>
+  <string>Discover a phone responding to the displayed FIDO cross-device QR code.</string>
+</dict>
+</plist>

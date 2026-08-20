@@ -466,3 +466,205 @@ Result:
 Decision: keep. Exact pushed source bytes are green for the declared hosted
 macOS source tests and iOS compile. This is not real-device interoperability,
 a passkey ceremony, an external tagged consumer, or release certification.
+
+## EXP-011 — Pinned trust and assertion architecture
+
+Date: 2026-08-20
+
+Question:
+
+Can origin/RP trust and assertion planning be made immutable and independent of
+OS parser drift, caller trust flags, U2F fallback, and raw hybrid CTAP access?
+
+Inputs:
+
+- WebAuthn Level 3 CR snapshot dated 2026-05-26.
+- CTAP 2.3 review draft dated 2025-10-23.
+- Chromium revision `535b82484305ec03127bbe951212f6afdec72a43`.
+- `swift-url` 0.4.2 revision
+  `9306a962396a50d7d88e924afcd7ec67226763db`.
+- Chromium public-suffix blob `5eabc92d51226369bf800473de55787951809886`,
+  SHA-256 `4155611645690529d1bbea0cfe653b0c45f63b028e0ba039de29a97edc3204ca`.
+
+Commands:
+
+```bash
+swift package resolve
+swift package show-dependencies --format json
+jq empty References/upstream-lock.json References/upstream-inventory.json Package.resolved
+swift test --filter WebAuthn
+swift test --filter Assertion
+```
+
+Result:
+
+- Exact-version WHATWG/UTS #46 parsing and immutable ICANN/private suffix data
+  replace OS-dependent normalization. Unicode/Punycode, private suffix,
+  wildcard/exception, localhost, IP, and unrelated-RP cases fail or normalize
+  as declared.
+- Exact assertion client data is 117 bytes for the retained vector and hashes
+  to `46f1878ce4e2ddba32f788e73968f3bca685d43bfc7ddffba91be4e2e7da9b5c`.
+- A validated ceremony has no public initializer and requires an explicit
+  consumer authorizer. Challenge, origin, RP, allow list, UV policy, and client
+  data are immutable after authorization.
+- `ValidatedWebAuthnAssertionCeremony + AuthenticatorInfo` compiles one opaque
+  CTAP2 plan. U2F-only, required-UV unavailable, resident-key unavailable,
+  credential-count, credential-size, and message-size mismatches fail before
+  assertion dispatch.
+- Dependency resolution also records `swift-system` 1.8.1 revision
+  `869129b7bf4ecc57b97d0193ad29690ca2134750`; it is transitive and not linked
+  by the selected WebURL product.
+
+Decision: keep. This is source and local vector evidence, not physical-device
+interoperability or Chromium parity.
+
+## EXP-012 — Strict assertion transport and server verification
+
+Date: 2026-08-20
+
+Question:
+
+Does one actor-owned hybrid transport execute allow-list and discoverable CTAP2
+assertions exactly once, validate every returned trust field, and produce an
+independently server-verifiable result?
+
+Commands:
+
+```bash
+swift test --filter Assertion
+swift test --filter Hybrid
+swift test --filter server
+swift test
+rg -n 'fatalError|preconditionFailure|try!|as!|Task\.detached|DispatchSemaphore|Process\(' Sources Tests
+rg -n 'print\(|debugPrint|NSLog|os_log|Logger' Sources Tests
+```
+
+Result:
+
+- The private hybrid transport owns the channel/cipher and issues one send per
+  transaction. Allow-list dispatch is `[0x02]`; a two-result discoverable flow
+  is `[0x02, 0x08]`; no explicit getInfo replay is inserted before assertion.
+- Pinned-source review caught and corrected the first test peer's revision-zero
+  framing error. Revision zero now uses raw encrypted CTAP with no shutdown;
+  current PXP uses typed CTAP/update/shutdown. GetInfo and allow-list assertion
+  tests pass under both exact profiles, with no profile inference or retry.
+- An injected ambiguous send/receive outcome records one `0x02`, closes the
+  transport, and leaves the ceremony terminally failed. Profile mismatch, U2F,
+  excluded transport hints, missing selector, UV mismatch, duplicate results,
+  invalid selection, and selection timeout never trigger fallback.
+- Assertion parsing enforces canonical bounded CBOR, RP hash, UP/required UV,
+  backup flags, credential membership, user privacy, signature bounds, exact
+  next-result count, counter parsing, and canonical extension output.
+- The independent RP verifier reconstructs server-owned client data, checks the
+  registered ES256 key, RP hash, credential/user handle, UP/UV, signature, and
+  monotonic counter. Every byte mutation across client data, authenticator data,
+  and DER signature was rejected.
+- The complete package suite executed 60 tests with zero failures. The two
+  source scans returned no matches.
+
+Decision: keep. Mock phone/channel and generated-key verification are
+development evidence only; they are not a real-phone receipt.
+
+## EXP-013 — Controlled RP harness and public ingress
+
+Date: 2026-08-20
+
+Question:
+
+Can a separate Swift-only harness issue real browser registration/assertion
+challenges, preserve secret-free operation, and expose the controlled RP over a
+valid public HTTPS origin without weakening the package boundary?
+
+Commands:
+
+```bash
+swift build --package-path Tools/ControlledRP
+swift test --package-path Tools/ControlledRP
+Tools/ControlledRP/build-app.sh
+swift run --package-path Tools/ControlledRP SiriusSecurityKeyControlledRP serve --origin http://localhost:8765 --port 8765
+curl --http1.1 http://localhost:8765/
+curl --http1.1 -H 'content-type: application/json' -d '{"deviceLabel":"local-smoke"}' http://localhost:8765/register/options
+tailscale up
+tailscale funnel status
+curl https://mikholae-macbook-m4-pro.tailefb2e3.ts.net/
+```
+
+Result:
+
+- Two harness tests pass: strict `fmt=none` registration followed by an ES256
+  server-verified assertion/counter update, and altered-client-data rejection.
+- Registration requires resident-key and UV, accepts only ES256, validates exact
+  create client data, RP hash, UP/UV/AT/backup flags, credential ID, canonical
+  COSE key, curve point, and empty attestation statement.
+- Assertion state and credentials are memory-only. HTTP requests, headers,
+  bodies, pending challenges, registrations, and assertions have explicit
+  bounds. Logs contain stage categories and opaque verification receipt IDs.
+- Local HTTP returned the registration page and exact required-UV ES256 options.
+  The configured Tailscale Funnel exposed the same page at a valid HTTPS origin
+  and returned HTTP 200 with `no-store`, CSP, and `nosniff` headers.
+- The first harness build failed because `@main` was placed in `main.swift` and
+  a listener callback captured mutable state under Swift 6 concurrency. Both
+  attempts were discarded: the entry file was renamed and readiness now uses a
+  lock-protected one-shot gate.
+- The first server lifetime emitted a checked-continuation misuse warning; the
+  leaked continuation was replaced with a cancellable monotonic-clock loop and
+  the clean launch/public smoke was repeated.
+- Artifact inspection then found the first manual `.app` assembly omitted the
+  SwiftPM suffix resource bundle. The build script now copies it into
+  `Contents/Resources`; the rebuilt artifact's suffix bytes hash to the locked
+  `4155611645690529d1bbea0cfe653b0c45f63b028e0ba039de29a97edc3204ca`.
+- No iPhone or Android registration/assertion receipt is recorded by this
+  experiment. The HTTPS page being reachable is not device interoperability.
+
+Decision: keep the separate harness and public-ingress contract. Physical
+allow-list/discoverable matrix rows remain unpassed pending explicit user/device
+interaction.
+
+## EXP-014 — Trust-bound assertion local source and sanitizer gate
+
+Date: 2026-08-20
+
+Question:
+
+Does the reconciled assertion tree pass its complete local source, negative,
+mutation, server, harness, release, memory-safety, race, dependency, and
+format/provenance gates?
+
+Commands:
+
+```bash
+swift --version
+sw_vers
+uname -m
+swift format lint --recursive Sources Tests Package.swift Tools/ControlledRP/Package.swift Tools/ControlledRP/Sources Tools/ControlledRP/Tests
+jq empty References/upstream-lock.json References/upstream-inventory.json Tests/SiriusSecurityKeyTests/Vectors/hybrid-vectors.json Package.resolved Tools/ControlledRP/Package.resolved
+swift build
+swift test
+swift build -c release
+swift test --sanitize=address
+swift test --sanitize=thread
+swift build --package-path Tools/ControlledRP -c release
+swift test --package-path Tools/ControlledRP
+xcodebuild -scheme SiriusSecurityKey -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
+git diff --check
+```
+
+Environment:
+
+- Apple Swift 6.3.3 (`swiftlang-6.3.3.1.3`, `clang-2100.1.1.101`).
+- macOS 26.2 build `25C56` on arm64.
+
+Result:
+
+- Format, provenance/package JSON, debug build, 60 package tests, release build,
+  two controlled-RP tests, controlled-RP release build, and diff check pass.
+- The same 60 package tests pass under AddressSanitizer and ThreadSanitizer with
+  no reported issue.
+- The local generic iOS build remains unavailable before compilation: iOS 26.5
+  is not installed and CoreSimulator 1051.54.0 is older than Xcode's required
+  1051.55.0. This gate is skipped locally, not passed; hosted CI retains it.
+- The final exact-head hosted workflow, external clean consumer, physical phone
+  matrix, and release-byte certification are not part of this local result.
+
+Decision: keep the local implementation. Await physical device receipts and the
+exact pushed-SHA hosted workflow; do not broaden any parity or release claim.

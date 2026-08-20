@@ -11,20 +11,41 @@ public enum HybridSessionState: String, Sendable {
   case connectingTunnel
   case handshaking
   case awaitingPostHandshake
+  case compilingAssertion
   case requestingGetInfo
+  case requestingAssertion
+  case requestingNextAssertion
+  case selectingAccount
   case complete
   case failed
   case cancelled
 }
 
-/// One-shot QR-initiated hybrid session through a validated
-/// `authenticatorGetInfo` response.
+private enum HybridSessionOperation: Sendable {
+  case getInfo
+  case getAssertion(
+    ceremony: ValidatedWebAuthnAssertionCeremony,
+    accountSelector: (any WebAuthnAccountSelector)?,
+    accountSelectionTimeout: Duration
+  )
+}
+
+private enum HybridSessionResult: Sendable {
+  case getInfo(AuthenticatorInfo)
+  case getAssertion(WebAuthnAssertion)
+}
+
+/// Actor-owned, one-shot QR-initiated hybrid authenticator session.
+///
+/// The session owns proximity, tunnel, Noise and the private CTAP transport.
+/// Public callers can request validated capabilities or execute an authorized
+/// WebAuthn assertion; raw CTAP is intentionally not exposed.
 public actor HybridSession {
   /// Canonical uppercase `FIDO:/` URI for consumer-owned QR presentation.
   public nonisolated let qrURI: String
-  /// Explicit post-handshake framing selected for this session.
+  /// Explicit post-handshake and established-message framing for this session.
   public nonisolated let wireProfile: HybridWireProfile
-  /// Current terminal or in-progress session phase.
+  /// Current terminal or in-progress secret-free session phase.
   public private(set) var state: HybridSessionState = .readyToDisplayQR
 
   private let bootstrap: HybridQRBootstrap
@@ -57,26 +78,96 @@ public actor HybridSession {
     self.randomSource = randomSource
   }
 
-  /// Performs proximity, tunnel, Noise, post-handshake validation, and one
-  /// explicit CTAP `authenticatorGetInfo` exchange.
+  /// Performs one explicit CTAP2 `authenticatorGetInfo` exchange through the
+  /// same private transport used by typed ceremonies.
   public func getInfo(
     scanner: any HybridBluetoothScanner,
     connector: any HybridWebSocketConnector = URLSessionHybridWebSocketConnector(),
     proximityTimeout: Duration = .seconds(120),
     sleeper: any HybridSleeper = ContinuousHybridSleeper()
   ) async throws -> AuthenticatorInfo {
+    let result = try await execute(
+      operation: .getInfo,
+      scanner: scanner,
+      connector: connector,
+      proximityTimeout: proximityTimeout,
+      sleeper: sleeper
+    )
+    guard case .getInfo(let info) = result else {
+      throw HybridProtocolError.handshakeStateViolation
+    }
+    return info
+  }
+
+  /// Executes one authorized assertion without exposing a raw CTAP route.
+  ///
+  /// Discoverable requests require an explicit account selector before any
+  /// network or CTAP dispatch, even if the authenticator ultimately returns a
+  /// single user-selected credential.
+  public func getAssertion(
+    ceremony: ValidatedWebAuthnAssertionCeremony,
+    scanner: any HybridBluetoothScanner,
+    accountSelector: (any WebAuthnAccountSelector)? = nil,
+    connector: any HybridWebSocketConnector = URLSessionHybridWebSocketConnector(),
+    proximityTimeout: Duration = .seconds(120),
+    accountSelectionTimeout: Duration = .seconds(120),
+    sleeper: any HybridSleeper = ContinuousHybridSleeper()
+  ) async throws -> WebAuthnAssertion {
+    guard proximityTimeout > .zero, accountSelectionTimeout > .zero else {
+      throw HybridProtocolError.invalidConfiguration
+    }
+    guard !ceremony.isDiscoverable || accountSelector != nil else {
+      throw WebAuthnError.accountSelectionRequired
+    }
+    guard
+      ceremony.allowCredentials.allSatisfy({ descriptor in
+        guard let transports = descriptor.transports else {
+          return true
+        }
+        return transports.contains(.hybrid)
+      })
+    else {
+      throw WebAuthnError.authenticatorCapabilityMismatch
+    }
+
+    let result = try await execute(
+      operation: .getAssertion(
+        ceremony: ceremony,
+        accountSelector: accountSelector,
+        accountSelectionTimeout: accountSelectionTimeout
+      ),
+      scanner: scanner,
+      connector: connector,
+      proximityTimeout: proximityTimeout,
+      sleeper: sleeper
+    )
+    guard case .getAssertion(let assertion) = result else {
+      throw HybridProtocolError.handshakeStateViolation
+    }
+    return assertion
+  }
+
+  private func execute(
+    operation: HybridSessionOperation,
+    scanner: any HybridBluetoothScanner,
+    connector: any HybridWebSocketConnector,
+    proximityTimeout: Duration,
+    sleeper: any HybridSleeper
+  ) async throws -> HybridSessionResult {
     if state == .cancelled {
       throw HybridProtocolError.cancelled
     }
-    guard state == .readyToDisplayQR else {
+    guard state == .readyToDisplayQR, proximityTimeout > .zero else {
       throw HybridProtocolError.handshakeStateViolation
     }
     activeScanner = scanner
     state = .awaitingProximity
+
     do {
-      return try await withThrowingTaskGroup(of: AuthenticatorInfo.self) { group in
+      return try await withThrowingTaskGroup(of: HybridSessionResult.self) { group in
         group.addTask {
-          try await self.performGetInfo(
+          try await self.perform(
+            operation: operation,
             scanner: scanner,
             connector: connector,
             proximityTimeout: proximityTimeout,
@@ -94,24 +185,21 @@ public actor HybridSession {
         return result
       }
     } catch is CancellationError {
-      await scanner.stop()
-      if let activeChannel {
-        await activeChannel.cancel()
-      }
-      activeScanner = nil
-      activeChannel = nil
+      await terminateActiveResources(scanner: scanner)
       state = .cancelled
       throw HybridProtocolError.cancelled
     }
   }
 
-  private func performGetInfo(
+  private func perform(
+    operation: HybridSessionOperation,
     scanner: any HybridBluetoothScanner,
     connector: any HybridWebSocketConnector,
     proximityTimeout: Duration,
     sleeper: any HybridSleeper
-  ) async throws -> AuthenticatorInfo {
+  ) async throws -> HybridSessionResult {
     var channel: (any HybridBinaryChannel)?
+    var transport: HybridAuthenticatorTransport?
 
     do {
       let discovery = HybridProximityDiscovery()
@@ -161,28 +249,112 @@ public actor HybridSession {
       let encryptedPostHandshake = try await openedChannel.receive()
       try checkCancellation()
       let postHandshake = try await handshake.cipher.decrypt(encryptedPostHandshake)
-      _ = try parsePostHandshakeGetInfo(postHandshake)
+      let postHandshakeInfo = try parsePostHandshakeGetInfo(postHandshake)
 
-      state = .requestingGetInfo
-      let request = Data([1, 0x04])
-      let encryptedRequest = try await handshake.cipher.encrypt(request)
-      try await openedChannel.send(encryptedRequest)
-      try checkCancellation()
-      let info = try await receiveExplicitGetInfo(
+      let ownedTransport = HybridAuthenticatorTransport(
         channel: openedChannel,
-        cipher: handshake.cipher
+        cipher: handshake.cipher,
+        wireProfile: wireProfile
       )
+      transport = ownedTransport
 
-      let shutdown = try await handshake.cipher.encrypt(Data([0]))
-      try await openedChannel.send(shutdown)
-      await openedChannel.cancel()
+      let result: HybridSessionResult
+      switch operation {
+      case .getInfo:
+        state = .requestingGetInfo
+        let response = try await ownedTransport.transact(CTAPRequest(command: 0x04))
+        result = .getInfo(try AuthenticatorInfoParser.parse(response: response))
+
+      case .getAssertion(
+        let ceremony,
+        let accountSelector,
+        let accountSelectionTimeout
+      ):
+        state = .compilingAssertion
+        try checkCancellation()
+        if !postHandshakeInfo.transports.isEmpty,
+          !postHandshakeInfo.transports.contains(where: {
+            $0 == "hybrid" || $0 == "cable" || $0 == "internal"
+          })
+        {
+          throw WebAuthnError.authenticatorCapabilityMismatch
+        }
+        let plan = try WebAuthnAssertionPlanCompiler.compile(
+          ceremony: ceremony,
+          authenticatorInfo: postHandshakeInfo
+        )
+
+        state = .requestingAssertion
+        let initial = try await ownedTransport.transact(plan.initialRequest)
+        var responses = [
+          try CTAPAssertionResponseParser.parse(
+            initial,
+            plan: plan,
+            isFirstResponse: true
+          )
+        ]
+        let expectedCount = responses[0].numberOfCredentials ?? 1
+        guard expectedCount <= plan.maximumAssertionCount else {
+          throw WebAuthnError.tooManyAssertions
+        }
+        if expectedCount > 1 {
+          state = .requestingNextAssertion
+          for _ in 1..<expectedCount {
+            try checkCancellation()
+            let next = try await ownedTransport.transact(plan.nextAssertionRequest)
+            responses.append(
+              try CTAPAssertionResponseParser.parse(
+                next,
+                plan: plan,
+                isFirstResponse: false
+              )
+            )
+          }
+          guard Set(responses.map(\.credentialID)).count == responses.count else {
+            throw WebAuthnError.invalidAssertionResponse
+          }
+        }
+
+        let selectedIndex: Int?
+        if responses.count > 1 {
+          guard let accountSelector else {
+            throw WebAuthnError.accountSelectionRequired
+          }
+          let candidates = try CTAPAssertionResponseParser.accountCandidates(
+            for: responses,
+            maximumAssertionCount: plan.maximumAssertionCount
+          )
+          state = .selectingAccount
+          selectedIndex = try await selectAccount(
+            from: candidates,
+            using: accountSelector,
+            timeout: accountSelectionTimeout,
+            sleeper: sleeper
+          )
+        } else {
+          selectedIndex = nil
+        }
+        result = .getAssertion(
+          try CTAPAssertionResponseParser.finish(
+            responses: responses,
+            plan: plan,
+            selectedResponseIndex: selectedIndex
+          )
+        )
+      }
+
+      try checkCancellation()
+      try await ownedTransport.finish()
+      await scanner.stop()
       activeChannel = nil
       activeScanner = nil
       state = .complete
-      return info
+      return result
     } catch is CancellationError {
       await scanner.stop()
-      if let channel {
+      if let transport {
+        await transport.cancel()
+      } else if let channel {
         await channel.cancel()
       }
       activeChannel = nil
@@ -191,7 +363,9 @@ public actor HybridSession {
       throw HybridProtocolError.cancelled
     } catch {
       await scanner.stop()
-      if let channel {
+      if let transport {
+        await transport.cancel()
+      } else if let channel {
         await channel.cancel()
       }
       activeChannel = nil
@@ -205,7 +379,7 @@ public actor HybridSession {
     }
   }
 
-  /// Terminates all active discovery and tunnel resources. Cancellation is
+  /// Terminates active discovery and tunnel resources. Cancellation is
   /// terminal and idempotent.
   public func cancel() async {
     guard state != .complete, state != .failed, state != .cancelled else {
@@ -221,6 +395,39 @@ public actor HybridSession {
     }
     self.activeScanner = nil
     self.activeChannel = nil
+  }
+
+  private func selectAccount(
+    from candidates: [WebAuthnAccountCandidate],
+    using selector: any WebAuthnAccountSelector,
+    timeout: Duration,
+    sleeper: any HybridSleeper
+  ) async throws -> Int {
+    do {
+      return try await withThrowingTaskGroup(of: Int.self) { group in
+        group.addTask {
+          try await selector.selectAccount(from: candidates)
+        }
+        group.addTask {
+          try await sleeper.sleep(for: timeout)
+          throw WebAuthnError.accountSelectionTimedOut
+        }
+        defer { group.cancelAll() }
+        guard let index = try await group.next() else {
+          throw WebAuthnError.accountSelectionTimedOut
+        }
+        guard candidates.indices.contains(index) else {
+          throw WebAuthnError.invalidAccountSelection
+        }
+        return index
+      }
+    } catch is CancellationError {
+      throw WebAuthnError.cancelled
+    } catch let error as WebAuthnError {
+      throw error
+    } catch {
+      throw WebAuthnError.invalidAccountSelection
+    }
   }
 
   private func parsePostHandshakeGetInfo(_ plaintext: Data) throws -> AuthenticatorInfo {
@@ -285,39 +492,13 @@ public actor HybridSession {
     }
   }
 
-  private func receiveExplicitGetInfo(
-    channel: any HybridBinaryChannel,
-    cipher: HybridNoiseCipher
-  ) async throws -> AuthenticatorInfo {
-    for _ in 0..<16 {
-      let encrypted = try await channel.receive()
-      let plaintext = try await cipher.decrypt(encrypted)
-      guard let messageType = plaintext.first else {
-        throw HybridProtocolError.invalidHybridMessage
-      }
-      let payload = plaintext.dropFirst()
-      switch messageType {
-      case 0:
-        throw HybridProtocolError.unexpectedShutdown
-      case 1:
-        let response: CTAPResponse
-        do {
-          response = try CTAPResponse(encoded: payload)
-        } catch {
-          throw HybridProtocolError.invalidHybridMessage
-        }
-        return try AuthenticatorInfoParser.parse(response: response)
-      case 2:
-        do {
-          _ = try CanonicalCBOR.decode(payload)
-        } catch {
-          throw HybridProtocolError.invalidHybridMessage
-        }
-      default:
-        throw HybridProtocolError.invalidHybridMessage
-      }
+  private func terminateActiveResources(scanner: any HybridBluetoothScanner) async {
+    await scanner.stop()
+    if let activeChannel {
+      await activeChannel.cancel()
     }
-    throw HybridProtocolError.messageTooLarge
+    activeScanner = nil
+    activeChannel = nil
   }
 
   private static func removeRevisionZeroPadding(_ plaintext: Data) throws -> Data {

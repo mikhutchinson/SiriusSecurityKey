@@ -14,8 +14,20 @@ let package = Package(
       targets: ["SiriusSecurityKey"]
     )
   ],
+  dependencies: [
+    .package(
+      url: "https://github.com/karwa/swift-url.git",
+      exact: "0.4.2"
+    )
+  ],
   targets: [
-    .target(name: "SiriusSecurityKey"),
+    .target(
+      name: "SiriusSecurityKey",
+      dependencies: [
+        .product(name: "WebURL", package: "swift-url")
+      ],
+      resources: [.copy("Resources/effective_tld_names.dat")]
+    ),
     .testTarget(
       name: "SiriusSecurityKeyTests",
       dependencies: ["SiriusSecurityKey"],

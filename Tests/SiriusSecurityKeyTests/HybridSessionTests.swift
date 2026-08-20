@@ -117,10 +117,12 @@ private actor ScriptedPhoneChannel: HybridBinaryChannel {
   private let responderRandomSource: any HybridRandomSource
   private let profile: HybridWireProfile
   private let getInfoPayload: Data
+  private var assertionResponses: [CTAPResponse]
   private var responder: HybridNoiseResponderResult?
   private var queuedMessages: [Data] = []
   private var postHandshakeSent = false
   private(set) var sawShutdown = false
+  private(set) var ctapCommands: [UInt8] = []
   private var closed = false
 
   init(
@@ -128,13 +130,15 @@ private actor ScriptedPhoneChannel: HybridBinaryChannel {
     preSharedKey: Data,
     responderRandomSource: any HybridRandomSource,
     profile: HybridWireProfile,
-    getInfoPayload: Data
+    getInfoPayload: Data,
+    assertionResponses: [CTAPResponse] = []
   ) {
     self.peerIdentity = peerIdentity
     self.preSharedKey = preSharedKey
     self.responderRandomSource = responderRandomSource
     self.profile = profile
     self.getInfoPayload = getInfoPayload
+    self.assertionResponses = assertionResponses
   }
 
   func send(_ data: Data) async throws {
@@ -157,16 +161,43 @@ private actor ScriptedPhoneChannel: HybridBinaryChannel {
       throw HybridProtocolError.handshakeStateViolation
     }
     let plaintext = try await responder.cipher.decrypt(data)
-    switch plaintext {
-    case Data([1, 0x04]):
-      var response = Data([1, 0])
-      response.append(getInfoPayload)
-      queuedMessages.append(try await responder.cipher.encrypt(response))
-    case Data([0]):
+    if profile == .pxp20260717, plaintext == Data([0]) {
       sawShutdown = true
+      return
+    }
+    let requestBytes: Data
+    switch profile {
+    case .pxp20260717:
+      guard plaintext.first == 1 else {
+        throw HybridProtocolError.invalidHybridMessage
+      }
+      requestBytes = Data(plaintext.dropFirst())
+    case .chromiumCableV2Revision0:
+      requestBytes = plaintext
+    }
+    guard let request = try? CTAPRequest(encoded: requestBytes) else {
+      throw HybridProtocolError.invalidHybridMessage
+    }
+    ctapCommands.append(request.command)
+
+    let ctapResponse: CTAPResponse
+    switch request.command {
+    case 0x04:
+      ctapResponse = CTAPResponse(status: 0, payload: getInfoPayload)
+    case 0x02, 0x08:
+      guard !assertionResponses.isEmpty else {
+        throw HybridTunnelError.receiveFailed
+      }
+      ctapResponse = assertionResponses.removeFirst()
     default:
       throw HybridProtocolError.invalidHybridMessage
     }
+    var response = Data()
+    if profile == .pxp20260717 {
+      response.append(1)
+    }
+    response.append(ctapResponse.encoded)
+    queuedMessages.append(try await responder.cipher.encrypt(response))
   }
 
   func receive() async throws -> Data {
@@ -214,6 +245,289 @@ private actor ScriptedPhoneChannel: HybridBinaryChannel {
     result.append(UInt8((paddingLength >> 8) & 0xff))
     return result
   }
+}
+
+private struct SelectingAccount: WebAuthnAccountSelector {
+  let index: Int
+
+  func selectAccount(from candidates: [WebAuthnAccountCandidate]) async throws -> Int {
+    index
+  }
+}
+
+private struct BlockingAccountSelector: WebAuthnAccountSelector {
+  func selectAccount(from candidates: [WebAuthnAccountCandidate]) async throws -> Int {
+    try await ContinuousClock().sleep(for: .seconds(60))
+    return 0
+  }
+}
+
+private struct SelectionTimeoutSleeper: HybridSleeper {
+  func sleep(for duration: Duration) async throws {
+    if duration < .seconds(1) {
+      return
+    }
+    try await ContinuousClock().sleep(for: .seconds(60))
+  }
+}
+
+private struct HybridAssertionFixture {
+  let session: HybridSession
+  let scanner: SessionScanner
+  let phone: ScriptedPhoneChannel
+  let connector: PhoneConnector
+}
+
+private func makeHybridAssertionFixture(
+  profile: HybridWireProfile = .pxp20260717,
+  getInfoPayload: Data,
+  assertionResponses: [CTAPResponse]
+) throws -> HybridAssertionFixture {
+  let identity = Data(repeating: 1, count: 32)
+  let qrSecret = Data(repeating: 2, count: 16)
+  let session = try HybridSession(
+    qrConfiguration: HybridQRConfiguration(requestType: .getAssertion),
+    wireProfile: profile,
+    randomSource: SequenceRandomSource([
+      identity,
+      qrSecret,
+      Data(repeating: 3, count: 32),
+    ])
+  )
+  let parsedQR = try HybridQRCode.parse(session.qrURI)
+  let peerIdentity = try P256.KeyAgreement.PublicKey(
+    compressedRepresentation: parsedQR.compressedPublicKey
+  ).x963Representation
+  let advertPlaintext = Data([0] + Array(1...10) + [9, 10, 11, 0, 0])
+  let bootstrap = HybridQRBootstrap(
+    uri: session.qrURI,
+    identityPrivateKey: identity,
+    qrSecret: parsedQR.qrSecret
+  )
+  let advertisement = try makeAdvertisement(
+    bootstrap: bootstrap,
+    plaintext: advertPlaintext
+  )
+  let psk = try HybridCryptography.derive(
+    secret: parsedQR.qrSecret,
+    salt: advertPlaintext,
+    purpose: .psk,
+    outputByteCount: 32
+  )
+  let phone = ScriptedPhoneChannel(
+    peerIdentity: peerIdentity,
+    preSharedKey: psk,
+    responderRandomSource: SequenceRandomSource([Data(repeating: 4, count: 32)]),
+    profile: profile,
+    getInfoPayload: getInfoPayload,
+    assertionResponses: assertionResponses
+  )
+  return HybridAssertionFixture(
+    session: session,
+    scanner: SessionScanner(advertisement: advertisement),
+    phone: phone,
+    connector: PhoneConnector(channel: phone)
+  )
+}
+
+@Test(
+  "Hybrid transport executes one allow-list assertion without getInfo replay",
+  arguments: HybridWireProfile.allCases
+)
+func hybridAllowListAssertion(profile: HybridWireProfile) async throws {
+  let credentialID = Data([0xa1])
+  let ceremony = try await assertionCeremony(
+    allowCredentials: [
+      try WebAuthnCredentialDescriptor(id: credentialID, transports: [.hybrid])
+    ]
+  )
+  let fixture = try makeHybridAssertionFixture(
+    profile: profile,
+    getInfoPayload: makeGetInfoPayload(),
+    assertionResponses: [
+      try assertionResponse(
+        credentialID: credentialID,
+        authenticatorData: assertionAuthenticatorData(signCount: 7)
+      )
+    ]
+  )
+
+  let assertion = try await fixture.session.getAssertion(
+    ceremony: ceremony,
+    scanner: fixture.scanner,
+    connector: fixture.connector,
+    proximityTimeout: .seconds(1),
+    accountSelectionTimeout: .seconds(1),
+    sleeper: SessionSleeper()
+  )
+
+  #expect(assertion.credentialID == credentialID)
+  #expect(assertion.signCount == 7)
+  #expect(assertion.authenticatorAttachment == .hybrid)
+  #expect(await fixture.phone.ctapCommands == [0x02])
+  #expect(await fixture.phone.sawShutdown == (profile == .pxp20260717))
+  #expect(await fixture.session.state == .complete)
+}
+
+@Test("Hybrid transport bounds getNextAssertion and selects an explicit account")
+func hybridDiscoverableAssertion() async throws {
+  let ceremony = try await assertionCeremony(allowCredentials: [])
+  let fixture = try makeHybridAssertionFixture(
+    getInfoPayload: makeGetInfoPayload(),
+    assertionResponses: [
+      try assertionResponse(
+        credentialID: Data([1]),
+        authenticatorData: assertionAuthenticatorData(signCount: 1),
+        userID: Data([0x11]),
+        userName: "first",
+        numberOfCredentials: 2
+      ),
+      try assertionResponse(
+        credentialID: Data([2]),
+        authenticatorData: assertionAuthenticatorData(signCount: 2),
+        userID: Data([0x22]),
+        userName: "second"
+      ),
+    ]
+  )
+
+  let assertion = try await fixture.session.getAssertion(
+    ceremony: ceremony,
+    scanner: fixture.scanner,
+    accountSelector: SelectingAccount(index: 1),
+    connector: fixture.connector,
+    proximityTimeout: .seconds(1),
+    accountSelectionTimeout: .seconds(1),
+    sleeper: SessionSleeper()
+  )
+
+  #expect(assertion.credentialID == Data([2]))
+  #expect(assertion.userHandle == Data([0x22]))
+  #expect(await fixture.phone.ctapCommands == [0x02, 0x08])
+  #expect(await fixture.session.state == .complete)
+}
+
+@Test("Known ceremony mismatches fail before transport dispatch")
+func hybridCeremonyPreflightFailures() async throws {
+  let discoverable = try await assertionCeremony(allowCredentials: [])
+  let discoverableFixture = try makeHybridAssertionFixture(
+    getInfoPayload: makeGetInfoPayload(),
+    assertionResponses: []
+  )
+  await #expect(throws: WebAuthnError.accountSelectionRequired) {
+    try await discoverableFixture.session.getAssertion(
+      ceremony: discoverable,
+      scanner: discoverableFixture.scanner,
+      connector: discoverableFixture.connector
+    )
+  }
+  #expect(await discoverableFixture.session.state == .readyToDisplayQR)
+  #expect(await discoverableFixture.connector.connectedURL == nil)
+
+  let wrongTransport = try await assertionCeremony(
+    allowCredentials: [
+      try WebAuthnCredentialDescriptor(id: Data([1]), transports: [.usb])
+    ]
+  )
+  let transportFixture = try makeHybridAssertionFixture(
+    getInfoPayload: makeGetInfoPayload(),
+    assertionResponses: []
+  )
+  await #expect(throws: WebAuthnError.authenticatorCapabilityMismatch) {
+    try await transportFixture.session.getAssertion(
+      ceremony: wrongTransport,
+      scanner: transportFixture.scanner,
+      connector: transportFixture.connector
+    )
+  }
+  #expect(await transportFixture.session.state == .readyToDisplayQR)
+  #expect(await transportFixture.connector.connectedURL == nil)
+}
+
+@Test("Ambiguous post-dispatch failure is terminal and never replayed")
+func hybridAssertionNeverReplaysAfterDispatch() async throws {
+  let ceremony = try await assertionCeremony(
+    allowCredentials: [
+      try WebAuthnCredentialDescriptor(id: Data([1]), transports: [.hybrid])
+    ]
+  )
+  let fixture = try makeHybridAssertionFixture(
+    getInfoPayload: makeGetInfoPayload(),
+    assertionResponses: []
+  )
+
+  await #expect(throws: HybridTunnelError.receiveFailed) {
+    try await fixture.session.getAssertion(
+      ceremony: ceremony,
+      scanner: fixture.scanner,
+      connector: fixture.connector,
+      proximityTimeout: .seconds(1),
+      accountSelectionTimeout: .seconds(1),
+      sleeper: SessionSleeper()
+    )
+  }
+  #expect(await fixture.phone.ctapCommands == [0x02])
+  #expect(await fixture.session.state == .failed)
+}
+
+@Test("Required UV capability mismatch fails before assertion dispatch")
+func hybridRequiredUVFailsBeforeDispatch() async throws {
+  let ceremony = try await assertionCeremony(
+    allowCredentials: [
+      try WebAuthnCredentialDescriptor(id: Data([1]), transports: [.hybrid])
+    ]
+  )
+  let noUVInfo = try assertionAuthenticatorInfo(options: ["rk": true])
+  let fixture = try makeHybridAssertionFixture(
+    getInfoPayload: CanonicalCBOR.encode(noUVInfo.rawResponse),
+    assertionResponses: []
+  )
+  await #expect(throws: WebAuthnError.userVerificationUnavailable) {
+    try await fixture.session.getAssertion(
+      ceremony: ceremony,
+      scanner: fixture.scanner,
+      connector: fixture.connector,
+      proximityTimeout: .seconds(1),
+      accountSelectionTimeout: .seconds(1),
+      sleeper: SessionSleeper()
+    )
+  }
+  #expect(await fixture.phone.ctapCommands.isEmpty)
+  #expect(await fixture.session.state == .failed)
+}
+
+@Test("Account selection timeout is terminal after bounded getNext sequencing")
+func hybridAccountSelectionTimeout() async throws {
+  let ceremony = try await assertionCeremony(allowCredentials: [])
+  let fixture = try makeHybridAssertionFixture(
+    getInfoPayload: makeGetInfoPayload(),
+    assertionResponses: [
+      try assertionResponse(
+        credentialID: Data([1]),
+        authenticatorData: assertionAuthenticatorData(),
+        userID: Data([1]),
+        numberOfCredentials: 2
+      ),
+      try assertionResponse(
+        credentialID: Data([2]),
+        authenticatorData: assertionAuthenticatorData(),
+        userID: Data([2])
+      ),
+    ]
+  )
+  await #expect(throws: WebAuthnError.accountSelectionTimedOut) {
+    try await fixture.session.getAssertion(
+      ceremony: ceremony,
+      scanner: fixture.scanner,
+      accountSelector: BlockingAccountSelector(),
+      connector: fixture.connector,
+      proximityTimeout: .seconds(2),
+      accountSelectionTimeout: .milliseconds(1),
+      sleeper: SelectionTimeoutSleeper()
+    )
+  }
+  #expect(await fixture.phone.ctapCommands == [0x02, 0x08])
+  #expect(await fixture.session.state == .failed)
 }
 
 @Test(
@@ -270,7 +584,7 @@ func completeHybridSession(profile: HybridWireProfile) async throws {
 
   #expect(info.versions == ["FIDO_2_0", "FIDO_2_1"])
   #expect(await session.state == .complete)
-  #expect(await phone.sawShutdown)
+  #expect(await phone.sawShutdown == (profile == .pxp20260717))
   #expect(await connector.connectedURL?.host == "cable.ua5v.com")
   #expect(await connector.connectedURL?.path.hasPrefix("/cable/connect/090a0b/") == true)
 }

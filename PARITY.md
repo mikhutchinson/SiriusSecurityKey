@@ -3,9 +3,10 @@
 Baseline Chromium revision:
 `535b82484305ec03127bbe951212f6afdec72a43`.
 
-> **Current status: first slice in development.** Nine bounded CTAP, hybrid,
-> and security rows have retained source and local evidence. None is supported:
-> the Chromium inventory and every real-device/release gate remain incomplete.
+> **Current status: trust-bound assertion slice in development.** Sixteen
+> bounded WebAuthn, CTAP, hybrid, and security rows have retained source and
+> local evidence. None is supported: the physical iPhone/Android matrix and
+> every release-byte gate remain incomplete.
 
 Status vocabulary:
 
@@ -18,20 +19,20 @@ Status vocabulary:
 
 | Family | Capability | Status | Evidence |
 |---|---|---|---|
-| WebAuthn | Origin and RP ID validation | unimplemented | — |
-| WebAuthn | `clientDataJSON` construction and verification | unimplemented | — |
+| WebAuthn | Origin and RP ID validation | development | [EXP-011](EXPERIMENTS.md#exp-011--pinned-trust-and-assertion-architecture) |
+| WebAuthn | `clientDataJSON` construction and verification | development | [EXP-011](EXPERIMENTS.md#exp-011--pinned-trust-and-assertion-architecture) |
 | WebAuthn | Credential creation | unimplemented | — |
-| WebAuthn | Credential assertion | unimplemented | — |
-| WebAuthn | Discoverable credentials and account selection | unimplemented | — |
-| WebAuthn | User presence and user verification policy | unimplemented | — |
+| WebAuthn | Credential assertion | development | [EXP-012](EXPERIMENTS.md#exp-012--strict-assertion-transport-and-server-verification) |
+| WebAuthn | Discoverable credentials and account selection | development | [EXP-012](EXPERIMENTS.md#exp-012--strict-assertion-transport-and-server-verification) |
+| WebAuthn | User presence and user verification policy | development | [EXP-012](EXPERIMENTS.md#exp-012--strict-assertion-transport-and-server-verification) |
 | WebAuthn | Conditional mediation and autofill-facing events | unimplemented | — |
-| WebAuthn | Timeout, abort, cancellation, and error mapping | unimplemented | — |
+| WebAuthn | Timeout, abort, cancellation, and error mapping | development | [EXP-012](EXPERIMENTS.md#exp-012--strict-assertion-transport-and-server-verification) |
 | WebAuthn | Attestation policy and formats | unimplemented | — |
 | WebAuthn | Chromium-baseline extension inventory | unimplemented | — |
 | CTAP | Bounded canonical CBOR | development | [EXP-007](EXPERIMENTS.md#exp-007--first-hybrid-slice-and-independent-vectors) |
 | CTAP | Authenticator discovery and `authenticatorGetInfo` | development | [EXP-007](EXPERIMENTS.md#exp-007--first-hybrid-slice-and-independent-vectors) |
 | CTAP | Make credential | unimplemented | — |
-| CTAP | Get assertion and next assertion | unimplemented | — |
+| CTAP | Get assertion and next assertion | development | [EXP-012](EXPERIMENTS.md#exp-012--strict-assertion-transport-and-server-verification) |
 | CTAP | Client PIN and PIN/UV auth protocols | unimplemented | — |
 | CTAP | Keepalive, cancellation, and status mapping | unimplemented | — |
 | Platform | Platform authenticator adapter | unimplemented | — |
@@ -42,7 +43,7 @@ Status vocabulary:
 | Hybrid | Bluetooth proximity advertisement | development | [EXP-007](EXPERIMENTS.md#exp-007--first-hybrid-slice-and-independent-vectors) |
 | Hybrid | Tunnel-domain derivation and WebSocket rendezvous | development | [EXP-008](EXPERIMENTS.md#exp-008--fail-closed-negative-and-cancellation-gates) |
 | Hybrid | Noise handshake and encrypted framing | development | [EXP-007](EXPERIMENTS.md#exp-007--first-hybrid-slice-and-independent-vectors) |
-| Hybrid | CTAP exchange over hybrid transport | development | [EXP-008](EXPERIMENTS.md#exp-008--fail-closed-negative-and-cancellation-gates) |
+| Hybrid | CTAP exchange over hybrid transport | development | [EXP-012](EXPERIMENTS.md#exp-012--strict-assertion-transport-and-server-verification) |
 | Hybrid | Linking, pairing, revocation, and recovery | unimplemented | — |
 | Security | Secret-safe diagnostics | development | [EXP-008](EXPERIMENTS.md#exp-008--fail-closed-negative-and-cancellation-gates) |
 | Security | Parser, protocol, and state-machine fuzzing | development | [EXP-008](EXPERIMENTS.md#exp-008--fail-closed-negative-and-cancellation-gates) |

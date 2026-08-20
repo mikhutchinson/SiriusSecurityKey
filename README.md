@@ -5,11 +5,13 @@ WebAuthn, CTAP, and FIDO hybrid transports for applications that need a real
 browser-grade authenticator client without depending on a privileged browser
 or a private platform API.
 
-> **Status: first hybrid slice in development.** The package now implements the
-> bounded QR → Bluetooth proximity → WebSocket tunnel → Noise → CTAP
-> `authenticatorGetInfo` route. Independent vectors and injected end-to-end
-> tests pass; no real-phone run, passkey ceremony, parity, production-support,
-> or release claim has been made.
+> **Status: trust-bound assertion slice in development.** The package now binds
+> a normalized origin, validated RP ID, exact client data, explicit intent,
+> credential policy, authenticator capabilities, hybrid transport, strict CTAP
+> assertion parsing, and independent RP verification. Local vectors, mutation,
+> sanitizer, and injected end-to-end tests pass. Physical iPhone/Android rows,
+> Chromium parity, production support, and release certification remain
+> separate evidence gates.
 
 ## Goal
 
@@ -57,22 +59,38 @@ Authenticator selection
 Verified WebAuthn response
 ```
 
-The retained implementation slice is deliberately narrower: QR bootstrap →
-phone proximity → tunnel → Noise handshake → `authenticatorGetInfo`. See the
-[Chromium Passkey Parity Plan](.plan/Chromium%20Passkey%20Parity%20Plan/README.md).
+The retained implementation slice is deliberately narrower than the complete
+architecture: a trust-bound `webauthn.get` ceremony over the QR → proximity →
+tunnel → Noise → CTAP hybrid path. See the [Chromium Passkey Parity Plan](.plan/Chromium%20Passkey%20Parity%20Plan/README.md).
 
 ## Development API
 
 ```swift
-let session = try HybridSession(
-  qrConfiguration: HybridQRConfiguration(requestType: .getAssertion),
-  wireProfile: .pxp20260717
+let request = try WebAuthnAssertionRequest(
+  origin: WebAuthnOrigin("https://login.example.com"),
+  relyingPartyID: "example.com",
+  challenge: challengeFromServer,
+  allowCredentials: [
+    try WebAuthnCredentialDescriptor(
+      id: credentialIDFromServer,
+      transports: [.hybrid]
+    )
+  ],
+  userVerification: .required
+)
+let ceremony = try await ValidatedWebAuthnAssertionCeremony.authorize(
+  request,
+  using: applicationIntentAuthorizer
 )
 
-// The consumer owns QR rendering and explicit user intent.
-renderQRCode(session.qrURI)
+let session = try HybridSession(
+  qrConfiguration: HybridQRConfiguration(requestType: .getAssertion),
+  wireProfile: explicitlySelectedProfile
+)
+renderQRCode(session.qrURI) // Consumer-owned presentation.
 
-let info = try await session.getInfo(
+let assertion = try await session.getAssertion(
+  ceremony: ceremony,
   scanner: CoreBluetoothHybridScanner()
 )
 ```
@@ -84,9 +102,35 @@ assigned-domain counts, and non-getAssertion hints until those capabilities
 exist.
 
 Consumer apps must provide the applicable Apple Bluetooth usage description
-and own presentation, lifecycle, consent, and cancellation. The package emits
-no protocol payloads or secrets to logs. This API currently stops after a
-validated `getInfo`; it does not create or assert a credential.
+and own presentation, lifecycle, consent, account selection, and cancellation.
+The package supplies no permissive intent authorizer and emits no protocol
+payloads or secrets to logs. The returned assertion can be checked against
+server-retained ceremony and credential state with
+`WebAuthnServerAssertionVerifier`.
+
+## Controlled RP harness
+
+`Tools/ControlledRP` is a separate Swift-only live gate, not a distributed
+library dependency. It serves a bounded in-memory HTTPS relying party through a
+consumer-provided TLS endpoint, verifies required-UV discoverable ES256 browser
+registrations, renders a one-shot hybrid QR, and accepts an assertion only after
+independent server-side challenge, origin, RP hash, signature, user-handle, and
+counter verification.
+
+```bash
+Tools/ControlledRP/build-app.sh
+
+Tools/ControlledRP/.build/SiriusSecurityKeyControlledRP.app/Contents/MacOS/SiriusSecurityKeyControlledRP \
+  serve --origin https://rp.example.test --port 8019
+
+Tools/ControlledRP/.build/SiriusSecurityKeyControlledRP.app/Contents/MacOS/SiriusSecurityKeyControlledRP \
+  assert --server https://rp.example.test --mode allow-list \
+  --device iPhone --profile pxp-20260717
+```
+
+The wire profile is mandatory; the harness never probes a second profile. RP
+state is memory-only and logs contain stage names and opaque receipt IDs, not
+credential IDs, assertions, challenges, user handles, or QR material.
 
 ## Build
 

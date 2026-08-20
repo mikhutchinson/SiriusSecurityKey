@@ -235,7 +235,7 @@ struct HybridTunnelServerDomain: Sendable, Equatable, Hashable {
     input.append(UInt8(value & 0xff))
     input.append(UInt8((value >> 8) & 0xff))
     input.append(0)
-    let digest = HybridCryptography.sha256(input)
+    let digest = ProtocolCryptography.sha256(input)
     var encoded: UInt64 = 0
     for index in 0..<8 {
       encoded |= UInt64(digest[index]) << UInt64(index * 8)

@@ -36,14 +36,32 @@ changes are recorded here. `EXPERIMENTS.md` owns reproducible evidence;
   specification hashes, retained third-party notices, and vector provenance.
 - Added CoreBluetooth and URLSession production adapters while preserving
   injectable scanner, clock, randomness, channel, and connector boundaries.
+- Added exact-version WHATWG/UTS #46 URL and IDNA parsing plus Chromium's pinned
+  ICANN/private public-suffix snapshot for fail-closed origin and RP binding.
+- Added immutable assertion requests, explicit user-intent authorization,
+  exact WebAuthn Level 3 collected-client-data bytes, and opaque CTAP plan
+  compilation against validated authenticator capabilities.
+- Added strict `authenticatorGetAssertion`/bounded
+  `authenticatorGetNextAssertion`, authenticator-data and extension parsing,
+  credential/account selection, RP-hash, UP/UV, backup-state, and counter
+  handling without U2F, profile, UV, probing, or replay fallback.
+- Added an independent ES256 RP verifier for server-retained challenge, origin,
+  RP, credential, user-handle, signature, and counter state.
+- Added a separate Swift-only controlled-RP harness with bounded in-memory HTTPS
+  registration/assertion endpoints, strict `fmt=none` ES256 registration,
+  explicit wire-profile selection, QR presentation, and secret-free receipts.
+- Added 60 package tests and two controlled-RP tests covering exact bytes,
+  malformed/truncated responses, signed-boundary mutation, capability mismatch,
+  account-selection timeout, single-dispatch ambiguity, and server verification.
 
 ### Current limitations
 
-- No WebAuthn ceremony, credential creation/assertion, persistent pairing, BLE
-  data transport, USB/NFC/platform authenticator, or conditional mediation is
+- Credential creation in the package, persistent pairing, BLE data transport,
+  USB/NFC/platform authenticators, and conditional mediation are not
   implemented.
-- No live phone, live tunnel, or real relying-party interoperability gate has
-  been run.
+- Physical iPhone and Android controlled-RP assertion receipts remain unpassed;
+  local source, mock transport, public-ingress smoke, and server-state tests do
+  not satisfy those rows.
 - No passkey or Chromium-parity claim is made.
 - No version has been released.
 
@@ -55,3 +73,12 @@ changes are recorded here. `EXPERIMENTS.md` owns reproducible evidence;
   gates in addition to debug tests and the release build.
 - Made explicit session cancellation terminal across discovery, tunnel-open,
   and active channel waits; it no longer waits for the proximity timeout.
+- Replaced the hard-coded hybrid `getInfo` endpoint with one private actor-owned
+  authenticator transport used by both capability diagnostics and typed
+  assertion execution; every ambiguous post-dispatch failure closes it.
+- Corrected established revision-zero framing to raw encrypted CTAP with no
+  shutdown frame; current PXP retains typed CTAP/update/shutdown messages.
+- Added exact `swift-url` 0.4.2 and its resolved `swift-system` 1.8.1 transitive
+  dependency, with version, revision, license, and notice locks.
+- Expanded hosted CI to run AddressSanitizer, ThreadSanitizer, and the separate
+  controlled-RP build/test gate.

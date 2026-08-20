@@ -39,6 +39,7 @@ successful demonstration.
 | [01](01-parity-matrix-and-provenance.md) | Define the Chromium/specification lock, provenance, and feature matrix. |
 | [02](02-first-implementation-slice.md) | Sequence QR → BLE → tunnel → Noise → `authenticatorGetInfo`. |
 | [03](03-test-and-release-plan.md) | Define negative, differential, interoperability, security, and release gates. |
+| [04](04-trust-bound-assertion-slice.md) | Bind origin, RP ID, intent, and exact client data to one typed hybrid assertion. |
 
 ## Dependency graph
 
@@ -48,6 +49,8 @@ successful demonstration.
 01 parity matrix and provenance
         ↓
 02 first hybrid implementation slice
+        ↓
+04 trust-bound assertion slice
         ↓
 03 test, interoperability, and release gates
         ↺ evidence updates 01 and the root ledgers
@@ -61,8 +64,11 @@ successful demonstration.
 4. Land tunnel-domain derivation and cancellable WebSocket rendezvous.
 5. Land Noise transcript and encrypted framing vectors.
 6. Exchange `authenticatorGetInfo` with a real phone.
-7. Connect complete assertion, creation, extensions, and additional transports.
-8. Certify parity per matrix row and separately certify release bytes.
+7. Compile one immutable trust-bound assertion plan and execute it through the
+   one-shot hybrid owner against controlled relying-party evidence.
+8. Connect creation, extensions, and additional transports to the same
+   ceremony compiler and typed execution boundary.
+9. Certify parity per matrix row and separately certify release bytes.
 
 ## Hard invariants
 

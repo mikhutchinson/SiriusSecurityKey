@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "recorded_at": "2026-08-19",
+  "recorded_at": "2026-08-20",
   "chromium": {
     "repository": "https://chromium.googlesource.com/chromium/src.git",
     "revision": "535b82484305ec03127bbe951212f6afdec72a43",
@@ -10,6 +10,36 @@
     "hybrid_tree": "e19c50264422f60b8daa136e0fb2212448427dff",
     "license": "BSD-3-Clause"
   },
+  "normalization_authorities": [
+    {
+      "name": "swift-url WebURL and IDNA",
+      "repository": "https://github.com/karwa/swift-url.git",
+      "version": "0.4.2",
+      "revision": "9306a962396a50d7d88e924afcd7ec67226763db",
+      "license": "Apache-2.0",
+      "license_sha256": "1a0b57773a46d9d4cc2f0d1780a17acc38af506bb1e0234aaa85f8ccd6dc0b92",
+      "role": "WHATWG URL parsing and UTS #46 non-transitional IDNA normalization"
+    },
+    {
+      "name": "swift-system transitive resolution",
+      "repository": "https://github.com/apple/swift-system.git",
+      "version": "1.8.1",
+      "revision": "869129b7bf4ecc57b97d0193ad29690ca2134750",
+      "license": "Apache-2.0",
+      "license_sha256": "2245a990b635558be210fb3eb4f8a6f7a49aebc0fefbf5859146a65ddc7ddcf3",
+      "role": "resolved transitive swift-url integration dependency; not linked by the WebURL product used here"
+    },
+    {
+      "name": "Chromium effective public suffix list",
+      "repository": "https://chromium.googlesource.com/chromium/src.git",
+      "revision": "535b82484305ec03127bbe951212f6afdec72a43",
+      "path": "net/base/registry_controlled_domains/effective_tld_names.dat",
+      "git_blob_sha1": "5eabc92d51226369bf800473de55787951809886",
+      "sha256": "4155611645690529d1bbea0cfe653b0c45f63b028e0ba039de29a97edc3204ca",
+      "license": "MPL-2.0",
+      "role": "versioned ICANN and private public-suffix authorization data"
+    }
+  ],
   "specifications": [
     {
       "name": "Client to Authenticator Protocol 2.3 Review Draft",

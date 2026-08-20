@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "recorded_at": "2026-08-19",
+  "recorded_at": "2026-08-20",
   "chromium_revision": "535b82484305ec03127bbe951212f6afdec72a43",
   "device_fido_tree": {
     "path": "device/fido",
@@ -38,8 +38,19 @@
       "CommonCrypto",
       "CoreBluetooth",
       "Security",
-      "URLSession"
+      "URLSession",
+      "WebURL"
     ]
+  },
+  "normalization_boundary": {
+    "swift_url_version": "0.4.2",
+    "swift_url_revision": "9306a962396a50d7d88e924afcd7ec67226763db",
+    "swift_url_license": "Apache-2.0",
+    "public_suffix_source": "net/base/registry_controlled_domains/effective_tld_names.dat",
+    "public_suffix_git_blob_sha1": "5eabc92d51226369bf800473de55787951809886",
+    "public_suffix_sha256": "4155611645690529d1bbea0cfe653b0c45f63b028e0ba039de29a97edc3204ca",
+    "public_suffix_license": "MPL-2.0",
+    "disposition": "exact-version WHATWG and UTS #46 parsing plus a bundled immutable ICANN and private suffix snapshot; no Foundation or caller trust fallback"
   },
   "relevant_feature_flags": [
     {
@@ -56,17 +67,29 @@
       "mode": "specification implementation",
       "destinations": [
         "Sources/SiriusSecurityKey/CanonicalCBOR.swift",
-        "Sources/SiriusSecurityKey/CoreBluetoothHybridScanner.swift"
+        "Sources/SiriusSecurityKey/CoreBluetoothHybridScanner.swift",
+        "Sources/SiriusSecurityKey/PublicSuffixDatabase.swift",
+        "Sources/SiriusSecurityKey/WebAuthnTrust.swift",
+        "Sources/SiriusSecurityKey/WebAuthnClientData.swift",
+        "Sources/SiriusSecurityKey/AuthenticatorData.swift",
+        "Sources/SiriusSecurityKey/CTAPAssertion.swift",
+        "Sources/SiriusSecurityKey/WebAuthnAssertion.swift",
+        "Sources/SiriusSecurityKey/WebAuthnServerAssertionVerifier.swift",
+        "Tools/ControlledRP"
       ],
       "authorities": [
         "CTAP 2.3 section 8",
-        "PXP 1.0 sections 5.1, 5.2, and 5.4.1"
+        "PXP 1.0 sections 5.1, 5.2, and 5.4.1",
+        "WebAuthn Level 3 sections 5.8.1, 5.11, 6.3.3, and 13.4.3",
+        "CTAP 2.3 sections 6.2 and 6.3",
+        "Public Suffix List algorithm and pinned rule source"
       ]
     },
     {
       "mode": "source-derived Swift port",
       "destinations": [
         "Sources/SiriusSecurityKey/AuthenticatorInfo.swift",
+        "Sources/SiriusSecurityKey/HybridAuthenticatorTransport.swift",
         "Sources/SiriusSecurityKey/HybridCryptography.swift",
         "Sources/SiriusSecurityKey/HybridNoise.swift",
         "Sources/SiriusSecurityKey/HybridProximity.swift",
@@ -105,13 +128,39 @@
     {"path":"device/fido/device_response_converter.h","git_blob_sha1":"8b1a58bbfa8f1481971132d475c8e0ececeb169c","sha256":"4d1d65733e563b0148eee4c976c7edbba27dce6eefdc652f6c99be2d02ae654f","role":"getInfo parsing contract"},
     {"path":"device/fido/device_response_converter.cc","git_blob_sha1":"fead37d89fff6bdebc165c4a9537ee7f6ec5d241","sha256":"110d553215b20d114edb8df666c97f1054a6a272d60655527619cf4b74847a89","role":"getInfo parsing behavior"},
     {"path":"device/fido/authenticator_get_info_response.h","git_blob_sha1":"cfbba33fff269653fbd5e04645dda590ad922261","sha256":"0f0ad78be0ce3efd36c2e51deabd73d5d0d3c687db6f89e5885b3c44b7d4a9ff","role":"getInfo capability model"},
-    {"path":"device/fido/authenticator_get_info_response.cc","git_blob_sha1":"0b0f4516d5677e026accbe1aa024102e52ed6dbb","sha256":"adc142304428b2a22487674f5cf59afcc27c2a3bc119996ffea855475697a75c","role":"getInfo capability behavior"}
+    {"path":"device/fido/authenticator_get_info_response.cc","git_blob_sha1":"0b0f4516d5677e026accbe1aa024102e52ed6dbb","sha256":"adc142304428b2a22487674f5cf59afcc27c2a3bc119996ffea855475697a75c","role":"getInfo capability behavior"},
+    {"path":"components/webauthn/core/browser/client_data_json.h","git_blob_sha1":"03c59ef7746ac6bcc1cc1abcd764440c3dc200ed","sha256":"e4b99c007af084623230db1571ad93beb516d6db950f7466df4311c42f64fb58","role":"collected client data contract"},
+    {"path":"components/webauthn/core/browser/client_data_json.cc","git_blob_sha1":"c111fb73fb1a162099ed3e64778a9483392c3d17","sha256":"54791680f03da573f54bd4f475fcafdc7a4aadabc089b321520c0d1eac986714","role":"collected client data byte behavior"},
+    {"path":"components/webauthn/core/browser/webauthn_security_utils.h","git_blob_sha1":"56595947f64ff26a3bfcbae205e5833f7e8b9fbb","sha256":"d7a11bf0a3a934beb3ee87dbed568b01bc257a1cfaa3ec1b7333f2a3d768adff","role":"origin and RP validation contract"},
+    {"path":"components/webauthn/core/browser/webauthn_security_utils.cc","git_blob_sha1":"57b8b79f36749f11e90b888e38c2c25f6452f5dd","sha256":"7788d620f3ee3689ac54523fe485c96cb04f8a5fb4654b85cdb11efd71efc2ac","role":"origin and RP validation behavior"},
+    {"path":"net/base/registry_controlled_domains/effective_tld_names.dat","git_blob_sha1":"5eabc92d51226369bf800473de55787951809886","sha256":"4155611645690529d1bbea0cfe653b0c45f63b028e0ba039de29a97edc3204ca","role":"ICANN and private public suffix rules"},
+    {"path":"net/base/registry_controlled_domains/registry_controlled_domain.h","git_blob_sha1":"c7fbe5bd774562a6004c029425a00b420e0197ae","sha256":"44816e83e990eff074ab2e49a8a612594122beaa1a2ace49c30c4db02f4c0e3e","role":"registrable-domain contract"},
+    {"path":"net/base/registry_controlled_domains/registry_controlled_domain.cc","git_blob_sha1":"929a3201f6dd50a4ea2d88418b1a4717923ed852","sha256":"a2ea7b6c239043a333a56872b0cf557f56d33b051c33b35218177456b60eaf6a","role":"registrable-domain matching behavior"},
+    {"path":"device/fido/authenticator_data.h","git_blob_sha1":"7245c7bbd18df27c039cc7cf695e3df32ee9694f","sha256":"a7dce2b8f0394eb16b8284c27cfed5cf9abc8dab38462ce3db60a122e80d577d","role":"authenticator data contract and flags"},
+    {"path":"device/fido/authenticator_data.cc","git_blob_sha1":"a8a7b1bdd5fd78ccfc007b57e459d21438bc2c57","sha256":"7f38820834b9e96f48df1edcd17e2b7fe73ab7c51ecef40d0a6dc521525cf09f","role":"authenticator data parsing behavior"},
+    {"path":"device/fido/authenticator_get_assertion_response.h","git_blob_sha1":"12958766ba17a1af2e5c20beb74eaa25f09c0dae","sha256":"f71213cd92da15257eadc7acd395d36cc5c0ae329c89d3c1095e5e23207edc7b","role":"assertion response contract"},
+    {"path":"device/fido/authenticator_get_assertion_response.cc","git_blob_sha1":"c809a1e844c14846b7c10b8f22403507ff8db7d5","sha256":"0883caae015c710d8c87952ad2c5546d20f4921f78bd4d354ddb0eab73edc6b8","role":"assertion response behavior"},
+    {"path":"device/fido/ctap_get_assertion_request.h","git_blob_sha1":"189b5d39039c76a4aacd8a6916cb06bb4f243163","sha256":"daa49e8a70e549ac32e397c6b1c7c2236b446a162efc92ce1876b26a73a65856","role":"getAssertion request contract"},
+    {"path":"device/fido/ctap_get_assertion_request.cc","git_blob_sha1":"5912928bb0c5a64efc773f5e9faf4deb40a3b343","sha256":"cea172f93c7f659311ab4aa047ab0a0dedf4bc4045c8caac2811ea14019afd4a","role":"canonical getAssertion request encoding"},
+    {"path":"device/fido/get_assertion_task.h","git_blob_sha1":"0f2a760eb9f95199b27d5c99dedfa41ca3a08d99","sha256":"ea9feaa427e4c74e04342f9d13b8dd24fb40db2158ff4e67084f45303b5af718","role":"assertion sequencing contract"},
+    {"path":"device/fido/get_assertion_task.cc","git_blob_sha1":"d8e94e7fd417ca6db3ac18102cecbaa2beb16870","sha256":"6f3ceb2bf27390469a9e8b37b64e7e1273fe2184d5eb05bc1eb55b863fc56a35","role":"getNextAssertion and response sequencing behavior"},
+    {"path":"device/fido/public/public_key_credential_descriptor.h","git_blob_sha1":"33270f47ed708bf5b1bd208a2f702653a4debfac","sha256":"5b2fa276369120eed40a73bbf06336ff755d87e17e6302cdf40f56978dbe3a3e","role":"credential descriptor contract"},
+    {"path":"device/fido/public/public_key_credential_descriptor.cc","git_blob_sha1":"7edaeb2c77ec3c0902cc940c832e7296c2519560","sha256":"9672c13bd8435713abd8f50c945224bc2e7e8874682e1339919c26288a00e8bc","role":"credential descriptor CTAP encoding"},
+    {"path":"device/fido/public/public_key_credential_user_entity.h","git_blob_sha1":"f20abd174ea45791a06523c667cbf4ab609ca791","sha256":"ec706ab914093748eca2da123447d537dc6879a1160370b3746d2918a1d0ccfd","role":"assertion user entity contract"},
+    {"path":"device/fido/public/public_key_credential_user_entity.cc","git_blob_sha1":"2fd659d6309cf1d4577e146d8162795535ebf391","sha256":"0cb7bc422237e9e9b4dc4a12112d8dec3a80ccdbd2db0068d879cabc7746a0dc","role":"assertion user entity parsing behavior"},
+    {"path":"device/fido/fido_user_verification_requirement.h","git_blob_sha1":"e8e09f68cd49337926b57ba252596f959c168e9c","sha256":"301d7bc4bb468f2fa7e7e016d7626e74a2ea705899369abcab94ef40229ab12b","role":"user verification policy contract"},
+    {"path":"device/fido/fido_user_verification_requirement.cc","git_blob_sha1":"bebd879ead65d5586ff466cd70d66459a1779f05","sha256":"b2645d51a7f87c19349170a03f0233077e58e2bd011ad8b93f573d757be04ef3","role":"user verification ordering behavior"}
   ],
   "source_to_destination_mapping": [
     {
       "destination": "Sources/SiriusSecurityKey/AuthenticatorInfo.swift",
       "mode": "source-derived Swift port",
       "sources": ["device/fido/device_response_converter.h", "device/fido/device_response_converter.cc", "device/fido/authenticator_get_info_response.h", "device/fido/authenticator_get_info_response.cc", "device/fido/cable/v2_authenticator.cc"]
+    },
+    {
+      "destination": "Sources/SiriusSecurityKey/HybridAuthenticatorTransport.swift",
+      "mode": "source-derived Swift port",
+      "sources": ["device/fido/cable/fido_tunnel_device.h", "device/fido/cable/fido_tunnel_device.cc", "device/fido/cable/v2_constants.h"]
     },
     {
       "destination": "Sources/SiriusSecurityKey/HybridCryptography.swift",
@@ -147,6 +196,46 @@
       "destination": "Sources/SiriusSecurityKey/URLSessionWebSocketConnector.swift",
       "mode": "source-derived Swift port",
       "sources": ["device/fido/cable/websocket_adapter.h", "device/fido/cable/websocket_adapter.cc", "device/fido/cable/fido_tunnel_device.cc"]
+    },
+    {
+      "destination": "Sources/SiriusSecurityKey/WebAuthnClientData.swift",
+      "mode": "specification implementation with differential behavior check",
+      "sources": ["components/webauthn/core/browser/client_data_json.h", "components/webauthn/core/browser/client_data_json.cc"]
+    },
+    {
+      "destination": "Sources/SiriusSecurityKey/WebAuthnTrust.swift",
+      "mode": "specification implementation with differential behavior check",
+      "sources": ["components/webauthn/core/browser/webauthn_security_utils.h", "components/webauthn/core/browser/webauthn_security_utils.cc", "net/base/registry_controlled_domains/registry_controlled_domain.h", "net/base/registry_controlled_domains/registry_controlled_domain.cc"]
+    },
+    {
+      "destination": "Sources/SiriusSecurityKey/PublicSuffixDatabase.swift",
+      "mode": "specification implementation over immutable upstream data",
+      "sources": ["net/base/registry_controlled_domains/effective_tld_names.dat"]
+    },
+    {
+      "destination": "Sources/SiriusSecurityKey/AuthenticatorData.swift",
+      "mode": "specification implementation with differential behavior check",
+      "sources": ["device/fido/authenticator_data.h", "device/fido/authenticator_data.cc"]
+    },
+    {
+      "destination": "Sources/SiriusSecurityKey/CTAPAssertion.swift",
+      "mode": "specification implementation with differential behavior check",
+      "sources": ["device/fido/ctap_get_assertion_request.h", "device/fido/ctap_get_assertion_request.cc", "device/fido/authenticator_get_assertion_response.h", "device/fido/authenticator_get_assertion_response.cc", "device/fido/get_assertion_task.h", "device/fido/get_assertion_task.cc", "device/fido/device_response_converter.cc", "device/fido/public/public_key_credential_descriptor.cc", "device/fido/public/public_key_credential_user_entity.cc", "device/fido/fido_user_verification_requirement.cc"]
+    },
+    {
+      "destination": "Sources/SiriusSecurityKey/WebAuthnAssertion.swift",
+      "mode": "specification implementation",
+      "sources": ["components/webauthn/core/browser/webauthn_security_utils.cc", "components/webauthn/core/browser/client_data_json.cc", "device/fido/get_assertion_task.cc"]
+    },
+    {
+      "destination": "Sources/SiriusSecurityKey/WebAuthnServerAssertionVerifier.swift",
+      "mode": "specification implementation with differential behavior check",
+      "sources": ["components/webauthn/core/browser/client_data_json.cc", "device/fido/authenticator_data.cc", "device/fido/authenticator_get_assertion_response.cc"]
+    },
+    {
+      "destination": "Tools/ControlledRP",
+      "mode": "specification implementation and non-distributed interoperability harness",
+      "sources": ["components/webauthn/core/browser/client_data_json.cc", "device/fido/authenticator_data.cc"]
     }
   ],
   "retained_vectors": {

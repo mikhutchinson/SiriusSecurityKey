@@ -31,3 +31,31 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
 ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+## swift-url
+
+Origin parsing and IDNA normalization use the exact `swift-url` 0.4.2 package
+revision `9306a962396a50d7d88e924afcd7ec67226763db`. That dependency is licensed
+under Apache License 2.0 and retains its own `LICENSE` file in the resolved
+SwiftPM source package. Exact revision and license hashes are recorded in
+`References/upstream-lock.json`.
+
+Copyright The swift-url Contributors.
+
+Licensed under the Apache License, Version 2.0. You may obtain a copy at
+<https://www.apache.org/licenses/LICENSE-2.0>.
+
+SwiftPM also resolves swift-system 1.8.1 as an unlinked transitive package of
+swift-url. It is licensed under Apache License 2.0 and retains its own license
+in the resolved source package; its exact revision is recorded in the lock.
+
+## Public Suffix List
+
+`Sources/SiriusSecurityKey/Resources/effective_tld_names.dat` is the exact
+Chromium-pinned Public Suffix List source blob recorded in
+`References/upstream-lock.json`. It includes ICANN and private rules and is
+licensed under the Mozilla Public License, version 2.0.
+
+This Source Code Form is subject to the terms of the Mozilla Public License,
+v. 2.0. If a copy of the MPL was not distributed with this file, one is
+available at <https://mozilla.org/MPL/2.0/>.
