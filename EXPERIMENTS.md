@@ -428,3 +428,41 @@ Result:
 Decision: keep. The local source and sanitizer gates pass. Await hosted macOS
 and iOS source results; real-device, live-tunnel, ceremony, external-consumer,
 and release-byte gates remain unrun.
+
+## EXP-010 — Exact-SHA hosted macOS and iOS source gate
+
+Date: 2026-08-19
+
+Question:
+
+Do the committed and pushed first-slice bytes pass the expanded hosted source
+workflow, including the iOS compile unavailable on the development host?
+
+Inputs:
+
+- Public commit `4bf6a9d7db426d6e887953f9cfcd83edbd627831`.
+- GitHub Actions run `32326554230`, job `96298887496`, on `macos-15`.
+
+Commands:
+
+```bash
+git push origin main
+gh run watch 32326554230 --repo mikhutchinson/SiriusSecurityKey --exit-status
+gh run view 32326554230 --repo mikhutchinson/SiriusSecurityKey --json databaseId,headSha,status,conclusion,createdAt,updatedAt,url,jobs
+gh run view 32326554230 --repo mikhutchinson/SiriusSecurityKey --log | rg 'warning:|error:'
+gh run view 32326554230 --repo mikhutchinson/SiriusSecurityKey --log | rg 'Test run with [0-9]+ tests|\*\* BUILD SUCCEEDED \*\*'
+```
+
+Result:
+
+- Checkout v5, format/provenance, debug build, all 33 tests, release build,
+  generic iOS build, and post-checkout steps passed.
+- The job completed successfully in 1 minute 7 seconds.
+- Hosted tests reported `33 tests passed after 0.200 seconds`.
+- Xcode 16.4 compiled every source for `arm64-apple-ios16.0` against the iOS
+  18.5 SDK and reported `BUILD SUCCEEDED`.
+- The warning/error log scan returned no matches.
+
+Decision: keep. Exact pushed source bytes are green for the declared hosted
+macOS source tests and iOS compile. This is not real-device interoperability,
+a passkey ceremony, an external tagged consumer, or release certification.
