@@ -82,3 +82,5 @@ changes are recorded here. `EXPERIMENTS.md` owns reproducible evidence;
   dependency, with version, revision, license, and notice locks.
 - Expanded hosted CI to run AddressSanitizer, ThreadSanitizer, and the separate
   controlled-RP build/test gate.
+- Recorded the successful exact-source hosted assertion gate, including the
+  generic iOS build, while retaining physical-phone rows as unpassed.

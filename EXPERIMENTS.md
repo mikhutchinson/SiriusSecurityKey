@@ -668,3 +668,48 @@ Result:
 
 Decision: keep the local implementation. Await physical device receipts and the
 exact pushed-SHA hosted workflow; do not broaden any parity or release claim.
+
+## EXP-015 — Exact pushed-SHA hosted assertion gate
+
+Date: 2026-08-20
+
+Question:
+
+Does the pushed trust-bound assertion implementation pass the complete hosted
+source, sanitizer, harness, and generic-iOS workflow at the exact source SHA?
+
+Immutable revision:
+
+- Repository: `https://github.com/mikhutchinson/SiriusSecurityKey`
+- Revision: `a0d0f068c7d185458c2f4802b786acdc7f8fef5c`
+- Workflow run: `32372627889`
+- Job: `96436477198`
+
+Commands:
+
+```bash
+git push origin main
+gh run watch 32372627889 --exit-status
+gh run view 32372627889 --json databaseId,headSha,status,conclusion,url,jobs
+gh run view 32372627889 --log | rg -n 'Test run with|warning:|error:'
+git diff --check
+```
+
+Result:
+
+- The hosted workflow completed successfully against exact revision
+  `a0d0f068c7d185458c2f4802b786acdc7f8fef5c` in 3 minutes 25 seconds.
+- Checkout, format/provenance, debug build, tests, sanitizers, release build,
+  controlled-RP harness, and generic iOS build all passed.
+- The package ran 60 tests normally, 60 under AddressSanitizer, and 60 under
+  ThreadSanitizer, all with zero failures. The controlled-RP harness ran two
+  tests with zero failures.
+- The warning/error scan returned no warning or error lines.
+- The evidence-only ledger reconciliation passed `git diff --check`.
+- This run verifies pushed source and the generic iOS build. It does not supply
+  a physical iPhone or Android assertion receipt and does not certify release
+  bytes or Chromium parity.
+
+Decision: keep. The pushed source gate is passed; the four physical-device
+allow-list/discoverable rows remain unpassed until server-verified receipts are
+observed.

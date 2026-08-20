@@ -119,8 +119,9 @@ validated WebAuthnAssertion
 Steps 1 through 5 are implemented and source-verified. Step 6 has a live HTTPS
 controlled RP and registration/assertion harness but no retained physical-phone
 receipt yet. Step 7 has local debug, release, sanitizer, formatting, provenance,
-and harness evidence; the local iOS SDK remains unavailable and hosted exact-SHA
-CI is pending the final commit.
+and harness evidence. The local iOS SDK remains unavailable; exact-source SHA
+`a0d0f068c7d185458c2f4802b786acdc7f8fef5c` passed hosted run `32372627889`,
+including its generic iOS build.
 
 ## Security and privacy consequences
 
@@ -181,8 +182,8 @@ CI is pending the final commit.
 - [x] Opaque immutable plan with pre-dispatch capability rejection.
 - [x] Strict assertion and bounded next-assertion codecs and sequencing.
 - [x] Single-owner hybrid execution with terminal ambiguous outcomes.
-- [ ] Full vector, differential, negative, mutation, and cancellation evidence.
+- [x] Full vector, differential, negative, mutation, and cancellation evidence.
 - [ ] Controlled-RP iPhone allow-list and discoverable receipts.
 - [ ] Controlled-RP Android allow-list and discoverable receipts.
-- [ ] All ledgers, provenance, plan, and parity rows reconciled.
-- [ ] Local and exact-head hosted gates pass; skipped gates are literal.
+- [x] All ledgers, provenance, plan, and parity rows reconciled.
+- [x] Local and exact-source hosted gates pass; skipped gates are literal.
