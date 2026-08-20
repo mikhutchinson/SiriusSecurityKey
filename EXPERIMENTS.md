@@ -790,3 +790,44 @@ Decision: keep the staged app publication fix. Under the goal's explicit
 availability condition, the four physical rows remain literally unpassed
 because neither required controlled-RP credential was available; do not infer
 device interoperability from the live ingress or pre-dispatch checks.
+
+## EXP-017 — Hosted staged-publication and final assertion-source gate
+
+Date: 2026-08-20
+
+Question:
+
+Does the exact pushed staged-publication correction pass every hosted source,
+sanitizer, app-artifact, and generic-iOS gate?
+
+Immutable revision:
+
+- Repository: `https://github.com/mikhutchinson/SiriusSecurityKey`
+- Revision: `bf65705482388249ac2afcf36f8b32fa102317ec`
+- Workflow run: `32374134693`
+- Job: `96441326923`
+
+Commands:
+
+```bash
+git push origin main
+gh run watch 32374134693 --exit-status
+gh run view 32374134693 --json databaseId,headSha,status,conclusion,url,jobs
+gh run view 32374134693 --log | rg -n 'Test run with|SiriusSecurityKeyControlledRP.app|415561|warning:|error:|Build complete'
+```
+
+Result:
+
+- The exact pushed revision completed successfully in 4 minutes 15 seconds.
+- Format/provenance, debug build, 60 package tests, AddressSanitizer with the
+  same 60 tests, ThreadSanitizer with the same 60 tests, release build, two
+  controlled-RP tests, staged release-app assembly, the locked suffix-resource
+  hash, and generic iOS build all passed.
+- The warning/error scan returned no warning or error line.
+- The controlled-RP step emitted the staged app path only after its release
+  assembly completed and the exact locked resource-hash assertion succeeded.
+- This is source and app-artifact evidence. It does not change the literally
+  unpassed iPhone/Android rows and does not certify release bytes or parity.
+
+Decision: keep. The complete pushed assertion source and staged harness gate is
+passed at the immutable revision above.

@@ -125,7 +125,9 @@ and unpassed. Step 7 has local debug, release, sanitizer, formatting,
 provenance, and harness evidence. The local iOS SDK remains unavailable;
 exact-source SHA `a0d0f068c7d185458c2f4802b786acdc7f8fef5c` passed hosted run
 `32372627889`, including its generic iOS build. The final staged-publication
-commit still requires its exact-head hosted workflow.
+source SHA `bf65705482388249ac2afcf36f8b32fa102317ec` passed hosted run
+`32374134693`, including staged app assembly, its locked suffix-resource hash,
+both sanitizers, and the generic iOS build.
 
 ## Security and privacy consequences
 
@@ -190,4 +192,4 @@ commit still requires its exact-head hosted workflow.
 - [ ] Controlled-RP iPhone allow-list and discoverable receipts.
 - [ ] Controlled-RP Android allow-list and discoverable receipts.
 - [x] All ledgers, provenance, plan, and parity rows reconciled.
-- [ ] Local and exact-head hosted gates pass; skipped gates are literal.
+- [x] Local and exact-source hosted gates pass; skipped gates are literal.

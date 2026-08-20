@@ -562,3 +562,13 @@ returning HTTP 200 and a client from the newly published app reached it without
 a loader hang. The original kill-pending process remains in macOS
 uninterruptible `_dyld_start` with no socket or ceremony I/O; no broader runtime
 claim is derived from it.
+
+### BUG-016 follow-up — hosted app-artifact gate
+
+Date: 2026-08-20
+
+Status: fixed and hosted-verified
+
+Exact revision `bf65705482388249ac2afcf36f8b32fa102317ec` passed hosted run
+`32374134693`. The controlled-RP step executed shell validation, two harness
+tests, staged release-app assembly, and the locked suffix-resource hash gate.

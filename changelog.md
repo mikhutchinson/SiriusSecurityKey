@@ -90,3 +90,4 @@ changes are recorded here. `EXPERIMENTS.md` owns reproducible evidence;
 - Added hosted controlled-RP app assembly and pinned suffix-resource hash gates.
 - Recorded the live physical-gate availability check: the controlled RP had no
   registered phone credential, so all four device rows remain unpassed.
+- Recorded the exact-source hosted staged-app, sanitizer, and generic-iOS gate.
