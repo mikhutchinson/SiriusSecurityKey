@@ -84,3 +84,9 @@ changes are recorded here. `EXPERIMENTS.md` owns reproducible evidence;
   controlled-RP build/test gate.
 - Recorded the successful exact-source hosted assertion gate, including the
   generic iOS build, while retaining physical-phone rows as unpassed.
+- Made controlled-RP app publication a staged whole-bundle replacement so
+  rebuilding cannot overwrite an executable mapped by an active server or
+  ceremony.
+- Added hosted controlled-RP app assembly and pinned suffix-resource hash gates.
+- Recorded the live physical-gate availability check: the controlled RP had no
+  registered phone credential, so all four device rows remain unpassed.

@@ -713,3 +713,80 @@ Result:
 Decision: keep. The pushed source gate is passed; the four physical-device
 allow-list/discoverable rows remain unpassed until server-verified receipts are
 observed.
+
+## EXP-016 — Physical gate availability and staged harness publication
+
+Date: 2026-08-20
+
+Question:
+
+Are controlled-RP credentials available for the required iPhone and Android
+assertions, and can the harness app be rebuilt without corrupting the executable
+boundary of a running server or ceremony?
+
+Commands:
+
+```bash
+tailscale funnel status
+curl --fail --silent --show-error --output /dev/null --write-out '%{http_code}\n' https://mikholae-macbook-m4-pro.tailefb2e3.ts.net/
+Tools/ControlledRP/.build/arm64-apple-macosx/release/SiriusSecurityKeyControlledRP assert --server https://mikholae-macbook-m4-pro.tailefb2e3.ts.net --mode discoverable --device iPhone --profile pxp-20260717
+ps -p 44224 -o pid,ppid,state,wchan,etime,command
+/usr/bin/sample 44224 1 1
+kill -KILL 44224
+tailscale down
+sh -n Tools/ControlledRP/build-app.sh
+Tools/ControlledRP/build-app.sh
+shasum -a 256 Tools/ControlledRP/.build/SiriusSecurityKeyControlledRP.app/Contents/Resources/SiriusSecurityKey_SiriusSecurityKey.bundle/effective_tld_names.dat
+Tools/ControlledRP/.build/SiriusSecurityKeyControlledRP.app/Contents/MacOS/SiriusSecurityKeyControlledRP serve --origin http://localhost:8020 --port 8020
+Tools/ControlledRP/.build/SiriusSecurityKeyControlledRP.app/Contents/MacOS/SiriusSecurityKeyControlledRP assert --server http://localhost:8020 --mode discoverable --device iPhone --profile pxp-20260717
+Tools/ControlledRP/.build/SiriusSecurityKeyControlledRP.app/Contents/MacOS/SiriusSecurityKeyControlledRP serve --origin http://localhost:8030 --port 8030
+Tools/ControlledRP/build-app.sh
+curl --fail --silent --show-error --output /dev/null --write-out '%{http_code}\n' http://localhost:8030/
+Tools/ControlledRP/.build/SiriusSecurityKeyControlledRP.app/Contents/MacOS/SiriusSecurityKeyControlledRP assert --server http://localhost:8030 --mode discoverable --device iPhone --profile pxp-20260717
+swift format lint --recursive Sources Tests Package.swift Tools/ControlledRP/Package.swift Tools/ControlledRP/Sources Tools/ControlledRP/Tests
+swift build
+swift test
+swift build -c release
+swift build --package-path Tools/ControlledRP -c release
+swift test --package-path Tools/ControlledRP
+git diff --check
+```
+
+Result:
+
+- The public HTTPS relying party returned HTTP 200 before the availability
+  check. Both an allow-list options request for label `iPhone` and the
+  label-independent discoverable options request returned unavailable before
+  user intent, QR presentation, Bluetooth, tunnel, Noise, or CTAP dispatch.
+  The server therefore contained no registered phone credential. No iPhone or
+  Android physical assertion row passed.
+- Rebuilding the app in place while an earlier server mapped its executable
+  exposed a harness-publication defect. One assertion process remained at
+  `_dyld_start` with a 96 KiB footprint, no socket, and no package-code frame.
+  Termination signals remain pending while macOS reports uninterruptible
+  executable loading; this process performed no ceremony I/O.
+- App assembly now builds a complete staging bundle and publishes it by
+  directory rename. The rebuilt artifact retained the locked suffix-list hash
+  `4155611645690529d1bbea0cfe653b0c45f63b028e0ba039de29a97edc3204ca` and
+  left no staging or backup path behind.
+- The rebuilt app simultaneously served local port 8020 and launched a second
+  assertion client from the same artifact. The client returned the expected
+  empty-store error immediately instead of hanging.
+- The original hazardous ordering was then repeated directly: an app server
+  remained live on port 8030 while `build-app.sh` replaced the app. The mapped
+  old server still returned HTTP 200, and a new client launched from the
+  replaced bundle and returned the expected empty-store error. An initial bind
+  attempt on port 8021 failed before listener readiness with a bounded
+  `ControlledRPError`; it created no listener and was discarded.
+- The public server was stopped and Tailscale was restored to its initial
+  stopped state after the empty credential store was established.
+- Format, debug build, 60 package tests, release build, two controlled-RP tests,
+  controlled-RP release build, and diff check pass after the publication fix.
+- Hosted CI now treats shell syntax, release app assembly, and the locked
+  suffix-list artifact hash as controlled-RP gates; its exact-head result is
+  pending the pushed commit.
+
+Decision: keep the staged app publication fix. Under the goal's explicit
+availability condition, the four physical rows remain literally unpassed
+because neither required controlled-RP credential was available; do not infer
+device interoperability from the live ingress or pre-dispatch checks.

@@ -522,3 +522,43 @@ Verification:
 The focused hybrid suite passes 29 tests/cases. Both profiles complete getInfo
 and an assertion; revision zero records no shutdown frame, current PXP does,
 and the profile-mismatch test still fails without retry.
+
+## BUG-016 — Controlled-RP app assembly overwrote a mapped executable
+
+Date: 2026-08-20
+
+Status: fixed and artifact-concurrency verified
+
+Symptom:
+
+After the controlled-RP app was rebuilt while an earlier server process still
+mapped the same bundle executable path, a subsequent assertion-client process
+remained at `_dyld_start`, used 96 KiB, opened no network socket, created no QR
+directory, and did not enter package code. `SIGTERM` and `SIGKILL` remained
+pending while the process was in uninterruptible executable loading.
+
+Root cause:
+
+`Tools/ControlledRP/build-app.sh` copied the release executable directly onto
+the existing app executable. `cp` truncated and rewrote the destination vnode
+instead of publishing a new complete bundle, violating the running-process
+boundary.
+
+Fix:
+
+Assemble the complete app in a task-owned staging directory, move the previous
+bundle aside, and rename the complete staged directory into place. A guarded
+trap removes only the exact staging/backup paths and restores the prior app if
+publication fails before the new bundle exists.
+
+Verification:
+
+The script passes `sh -n`. The rebuilt artifact retains the locked suffix-list
+hash, leaves no staging/backup path, and simultaneously runs a local server and
+a second assertion client from the same app. The second client reaches the
+server and returns the expected empty-store error rather than hanging. A second
+test kept the old app server mapped while rebuilding: the old server continued
+returning HTTP 200 and a client from the newly published app reached it without
+a loader hang. The original kill-pending process remains in macOS
+uninterruptible `_dyld_start` with no socket or ceremony I/O; no broader runtime
+claim is derived from it.

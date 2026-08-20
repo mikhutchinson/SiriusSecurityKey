@@ -19,8 +19,10 @@ and `INV-SK15`.
   the live hybrid CTAP channel and encoded plan remain inaccessible.
 - `WebAuthnServerAssertionVerifier.swift` and `Tools/ControlledRP` independently
   verify ES256 signatures, user handles, RP hashes, UV, and signature counters.
-  The public HTTPS ingress and local server-state tests have passed; physical
-  iPhone and Android assertion receipts remain unpassed.
+  The public HTTPS ingress and local server-state tests have passed. Live
+  allow-list and discoverable option attempts proved the controlled RP had no
+  registered phone credential; physical iPhone and Android receipts remain
+  literally unpassed.
 - `PARITY.md` classifies the retained WebAuthn and CTAP rows only as
   `development`, pending physical-device and release-byte evidence.
 
@@ -117,11 +119,13 @@ validated WebAuthnAssertion
    and verify the exact pushed SHA.
 
 Steps 1 through 5 are implemented and source-verified. Step 6 has a live HTTPS
-controlled RP and registration/assertion harness but no retained physical-phone
-receipt yet. Step 7 has local debug, release, sanitizer, formatting, provenance,
-and harness evidence. The local iOS SDK remains unavailable; exact-source SHA
-`a0d0f068c7d185458c2f4802b786acdc7f8fef5c` passed hosted run `32372627889`,
-including its generic iOS build.
+controlled RP and registration/assertion harness; the live server had no
+registered phone credential, so every physical-phone row remains unavailable
+and unpassed. Step 7 has local debug, release, sanitizer, formatting,
+provenance, and harness evidence. The local iOS SDK remains unavailable;
+exact-source SHA `a0d0f068c7d185458c2f4802b786acdc7f8fef5c` passed hosted run
+`32372627889`, including its generic iOS build. The final staged-publication
+commit still requires its exact-head hosted workflow.
 
 ## Security and privacy consequences
 
@@ -186,4 +190,4 @@ including its generic iOS build.
 - [ ] Controlled-RP iPhone allow-list and discoverable receipts.
 - [ ] Controlled-RP Android allow-list and discoverable receipts.
 - [x] All ledgers, provenance, plan, and parity rows reconciled.
-- [x] Local and exact-source hosted gates pass; skipped gates are literal.
+- [ ] Local and exact-head hosted gates pass; skipped gates are literal.

@@ -31,5 +31,8 @@ jobs:
         run: |
           swift build --package-path Tools/ControlledRP
           swift test --package-path Tools/ControlledRP
+          sh -n Tools/ControlledRP/build-app.sh
+          Tools/ControlledRP/build-app.sh
+          test "$(shasum -a 256 Tools/ControlledRP/.build/SiriusSecurityKeyControlledRP.app/Contents/Resources/SiriusSecurityKey_SiriusSecurityKey.bundle/effective_tld_names.dat | awk '{print $1}')" = "4155611645690529d1bbea0cfe653b0c45f63b028e0ba039de29a97edc3204ca"
       - name: iOS build
         run: xcodebuild -scheme SiriusSecurityKey -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build

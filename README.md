@@ -117,6 +117,11 @@ registrations, renders a one-shot hybrid QR, and accepts an assertion only after
 independent server-side challenge, origin, RP hash, signature, user-handle, and
 counter verification.
 
+Build the app before starting either process. App assembly stages a complete
+bundle, moves the previous bundle aside, and publishes the staged directory, so
+a rebuild never overwrites an executable mapped by an active ceremony or
+server.
+
 ```bash
 Tools/ControlledRP/build-app.sh
 
